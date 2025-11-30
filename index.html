@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>謎検もどき</title>
+    <title>謎解き能力検定 2025秋</title>
     
     <!-- React & ReactDOM -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -14,7 +14,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome (Icons) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts: Oswald (DIN-like), Noto Sans JP -->
+    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
     <!-- YakuHanJP -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/yakuhanjp@3.4.1/dist/css/yakuhanjp.min.css">
@@ -55,32 +55,11 @@
     <script type="text/babel">
         const { useState, useEffect, useRef, useMemo, forwardRef, useCallback } = React;
 
-        // --- Configuration ---
-        const TOTAL_QUESTIONS = 50;
+        // --- Constants ---
         const TIME_LIMIT_MINUTES = 60;
+        const CSV_PATH = 'riddle/riddle1/riddle1.csv';
 
-        // Correct answers mock
-        const CORRECT_ANSWERS = Array.from({ length: TOTAL_QUESTIONS }, (_, i) => {
-            const id = i + 1;
-            const isMultipleChoice = [11, 12, 13, 50].includes(id);
-            return isMultipleChoice ? (id % 4) : "サンプル解答";
-        });
-
-        // Question Config
-        const QUESTION_CONFIG = Array.from({ length: TOTAL_QUESTIONS }, (_, i) => {
-            const id = i + 1;
-            const isMultipleChoice = [11, 12, 13, 50].includes(id); 
-            return {
-                id: id,
-                imagePath: `riddle/riddle1/riddle1_${String(id).padStart(2, '0')}.png`,
-                explanationPath: `riddle/riddle1/answer_${String(id).padStart(2, '0')}.jfif`,
-                points: 2,
-                type: isMultipleChoice ? 'choice' : 'text',
-                options: isMultipleChoice ? ['イモ', 'チゲ', 'ツル', 'ユキ'] : [],
-                correctAnswer: CORRECT_ANSWERS[i]
-            };
-        });
-
+        // --- Helper: Circled Numbers ---
         const getCircledNumber = (index) => {
             const circled = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩'];
             return circled[index] || `(${index + 1})`;
@@ -133,12 +112,12 @@
                 <div className="flex flex-col items-center justify-center h-full bg-white p-4 overflow-y-auto">
                     <div className="max-w-4xl w-full bg-white p-8 space-y-8">
                         <div className="border-b-2 border-red-600 pb-4 mb-8 flex justify-between items-end">
-                            <h1 className="text-3xl font-bold text-red-600">謎検もどき</h1>
-                            <div className="text-sm text-gray-500">ユーザーネーム: {handleName || "未入力"}</div>
+                            <h1 className="text-3xl font-bold text-red-600">謎解き能力検定 2025秋</h1>
+                            <div className="text-sm text-gray-500">受検番号: {handleName || "未入力"}</div>
                         </div>
                         <div className="space-y-6">
                             <div className="bg-gray-50 p-6 rounded border border-gray-200">
-                                <label className="block text-gray-700 font-bold mb-2">ユーザーネーム</label>
+                                <label className="block text-gray-700 font-bold mb-2">ハンドルネーム (受検番号)</label>
                                 <input type="text" className="w-full border-2 border-gray-300 p-3 rounded focus:outline-none focus:border-red-500 text-lg" placeholder="ここに入力してください" value={handleName} onChange={(e) => setHandleName(e.target.value)} />
                             </div>
                             <div className="bg-gray-50 p-6 rounded border border-gray-200">
@@ -233,6 +212,8 @@
                 if (!ctx || !canvas) return;
                 const pos = getPos(e);
                 currentStroke.current.push(pos);
+                
+                // 部分描画ではなく全描画（消しゴム対応のため）
                 ctx.save();
                 ctx.setTransform(1, 0, 0, 1, 0, 0);
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -251,6 +232,14 @@
                 e.currentTarget.setPointerCapture(e.pointerId);
                 isDrawing.current = true;
                 currentStroke.current = [getPos(e)];
+                // 初期点描画
+                const ctx = ctxRef.current;
+                if(ctx) {
+                    ctx.beginPath();
+                    ctx.moveTo(currentStroke.current[0].x, currentStroke.current[0].y);
+                    ctx.lineTo(currentStroke.current[0].x, currentStroke.current[0].y);
+                    ctx.stroke();
+                }
             };
 
             const handlePointerMove = (e) => {
@@ -277,7 +266,7 @@
             );
         };
 
-        const ExamScreen = ({ userName, onFinish }) => {
+        const ExamScreen = ({ userName, onFinish, config }) => {
             const [currentQIndex, setCurrentQIndex] = useState(0);
             const [answers, setAnswers] = useState({});
             const [lockedAnswers, setLockedAnswers] = useState({});
@@ -292,7 +281,9 @@
             const [modalConfig, setModalConfig] = useState({ isOpen: false, message: '', onConfirm: () => {} });
             const [isTimeUp, setIsTimeUp] = useState(false);
             const itemRefs = useRef({});
-            const currentQ = QUESTION_CONFIG[currentQIndex];
+            const listContainerRef = useRef(null);
+            
+            const currentQ = config[currentQIndex];
 
             useEffect(() => {
                 const timer = setInterval(() => {
@@ -334,7 +325,7 @@
             const submitAnswer = () => {
                 setLockedAnswers(prev => ({ ...prev, [currentQ.id]: true }));
                 setTimeout(() => {
-                    if (currentQIndex === TOTAL_QUESTIONS - 1) {
+                    if (currentQIndex === config.length - 1) {
                         setCurrentQIndex(0);
                     } else {
                         setCurrentQIndex(prev => prev + 1);
@@ -346,7 +337,7 @@
             const toggleBookmark = (id) => setBookmarks(prev => ({ ...prev, [id]: !prev[id] }));
             const navigate = (direction) => {
                 if (direction === 'prev' && currentQIndex > 0) setCurrentQIndex(curr => curr - 1);
-                if (direction === 'next' && currentQIndex < TOTAL_QUESTIONS - 1) setCurrentQIndex(curr => curr + 1);
+                if (direction === 'next' && currentQIndex < config.length - 1) setCurrentQIndex(curr => curr + 1);
             };
             const confirmAction = (message, action) => {
                 setModalConfig({ isOpen: true, message, onConfirm: () => { action(); setModalConfig(prev => ({ ...prev, isOpen: false })); } });
@@ -408,7 +399,7 @@
                     <div className="bg-white border-b border-red-500 h-14 flex items-center justify-between px-4 shrink-0 z-20">
                         <div className="flex items-center space-x-4">
                             <h1 className="text-xl font-bold text-red-600 tracking-tighter hidden sm:block">謎検</h1>
-                            <div className="text-xs text-gray-500 hidden md:block">ユーザーネーム: {userName}</div>
+                            <div className="text-xs text-gray-500 hidden md:block">受検番号: {userName}</div>
                             <button onClick={() => confirmAction('受検を終了しますか？(後戻りできません)', handleFinish)} className="border border-gray-400 text-gray-700 px-3 py-1 text-xs hover:bg-gray-100">受検を終了する &gt;</button>
                         </div>
                         <div className="flex items-end">
@@ -421,7 +412,7 @@
                             <div className="flex-1 bg-gray-100 flex items-center justify-center p-2 md:p-4 overflow-hidden relative">
                                 <div className="w-full h-full max-w-5xl relative flex items-center justify-center">
                                     {currentQIndex > 0 && <button onClick={() => navigate('prev')} className="absolute left-0 top-1/2 -translate-y-1/2 z-30 bg-white/50 hover:bg-white rounded-full p-2 text-gray-600 shadow-lg transform -translate-x-1/2 md:translate-x-0 w-16 h-16 flex items-center justify-center"><i className="fas fa-chevron-left text-3xl"></i><div className="absolute -bottom-4 text-xs text-center font-number bg-white/80 px-1 rounded">{String(currentQIndex).padStart(2,'0')}</div></button>}
-                                    {currentQIndex < TOTAL_QUESTIONS - 1 && <button onClick={() => navigate('next')} className="absolute right-0 top-1/2 -translate-y-1/2 z-30 bg-white/50 hover:bg-white rounded-full p-2 text-gray-600 shadow-lg transform translate-x-1/2 md:translate-x-0 w-16 h-16 flex items-center justify-center"><i className="fas fa-chevron-right text-3xl"></i><div className="absolute -bottom-4 text-xs text-center font-number bg-white/80 px-1 rounded">{String(currentQIndex + 2).padStart(2,'0')}</div></button>}
+                                    {currentQIndex < config.length - 1 && <button onClick={() => navigate('next')} className="absolute right-0 top-1/2 -translate-y-1/2 z-30 bg-white/50 hover:bg-white rounded-full p-2 text-gray-600 shadow-lg transform translate-x-1/2 md:translate-x-0 w-16 h-16 flex items-center justify-center"><i className="fas fa-chevron-right text-3xl"></i><div className="absolute -bottom-4 text-xs text-center font-number bg-white/80 px-1 rounded">{String(currentQIndex + 2).padStart(2,'0')}</div></button>}
                                     <div className="relative w-full h-full select-none flex items-center justify-center">
                                         <AsyncImage src={currentQ.imagePath} alt={`Problem ${currentQ.id}`} className="max-w-full max-h-full object-contain pointer-events-none" fallback={<div className="absolute inset-0 w-full h-full bg-gray-50 flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-300 flex"><i className="fas fa-image text-4xl mb-2"></i><span className="text-xl font-bold text-gray-500">問題 {currentQ.id}</span><span className="text-xs mt-2">画像を配置してください: {currentQ.imagePath}</span></div>} />
                                         <div className="absolute inset-0 w-full h-full"><CanvasLayer drawings={drawings[currentQ.id] || []} onDrawEnd={handleDrawEnd} tool={tool} color={color} isVisible={isToolbarVisible} /></div>
@@ -480,8 +471,8 @@
                         </div>
                         <div className="hidden md:flex w-64 bg-white border-l border-gray-300 flex-col shrink-0 overflow-hidden h-full">
                             <div ref={listContainerRef} className="flex-1 overflow-y-auto custom-scrollbar pb-20">
-                                {QUESTION_CONFIG.map((q) => (
-                                    <QuestionListItem key={q.id} ref={(el) => itemRefs.current[q.id] = el} q={q} isActive={currentQIndex === q.id - 1} isAnswered={!!lockedAnswers[q.id]} isBookmarked={!!bookmarks[q.id]} userAnswer={answers[q.id]} onClick={() => setCurrentQIndex(q.id - 1)} />
+                                {config.map((q, idx) => (
+                                    <QuestionListItem key={q.id} ref={(el) => itemRefs.current[q.id] = el} q={q} isActive={currentQIndex === idx} isAnswered={!!lockedAnswers[q.id]} isBookmarked={!!bookmarks[q.id]} userAnswer={answers[q.id]} onClick={() => setCurrentQIndex(idx)} />
                                 ))}
                             </div>
                         </div>
@@ -494,8 +485,8 @@
                                     <button onClick={() => setIsMenuOpen(false)}><i className="fas fa-times text-2xl text-gray-600"></i></button>
                                 </div>
                                 <div className="flex-1 overflow-y-auto p-2">
-                                    {QUESTION_CONFIG.map((q) => (
-                                        <QuestionListItem key={q.id} q={q} isActive={currentQIndex === q.id - 1} isAnswered={!!lockedAnswers[q.id]} isBookmarked={!!bookmarks[q.id]} userAnswer={answers[q.id]} onClick={() => { setCurrentQIndex(q.id - 1); setIsMenuOpen(false); }} />
+                                    {config.map((q, idx) => (
+                                        <QuestionListItem key={q.id} q={q} isActive={currentQIndex === idx} isAnswered={!!lockedAnswers[q.id]} isBookmarked={!!bookmarks[q.id]} userAnswer={answers[q.id]} onClick={() => { setCurrentQIndex(idx); setIsMenuOpen(false); }} />
                                     ))}
                                 </div>
                             </div>
@@ -505,29 +496,70 @@
             );
         };
 
-        const FinishScreen = ({ userAnswers, onRestart }) => {
+        const FinishScreen = ({ userAnswers, onRestart, config }) => {
             const [explanationImage, setExplanationImage] = useState(null);
             const results = useMemo(() => {
                 let totalScore = 0;
-                const grading = QUESTION_CONFIG.map(q => {
+                const grading = config.map(q => {
                     const userAns = userAnswers[q.id];
                     let isCorrect = false;
                     let displayUserAns = "-";
                     let displayCorrectAns = "-";
+                    
                     if (q.type === 'choice') {
-                        displayUserAns = userAns !== undefined ? `${getCircledNumber(userAns)}${q.options[userAns]}` : "未回答";
-                        displayCorrectAns = `${getCircledNumber(q.correctAnswer)}${q.options[q.correctAnswer]}`;
-                        isCorrect = userAns === q.correctAnswer;
+                        // User Answer formatting
+                        if (userAns !== undefined) {
+                            displayUserAns = `${getCircledNumber(userAns)}${q.options[userAns]}`;
+                        } else {
+                            displayUserAns = "未回答";
+                        }
+                        
+                        // Correct Answer formatting
+                        // CSV正解が「④ユキ」のような文字列の場合と、単に「ユキ」の場合に対応
+                        // q.correctAnswerListには正解の文字列配列が入っている
+                        // もし正解文字列が「④」で始まっていればそのまま、そうでなければ選択肢から探して整形
+                        const correctStr = q.correctAnswerList[0] || ""; // とりあえず1つ目を表示
+                        // 選択肢番号が含まれているか簡易チェック
+                        const hasCircle = /^[\u2460-\u2469]/.test(correctStr);
+                        
+                        if (hasCircle) {
+                            displayCorrectAns = correctStr;
+                        } else {
+                            // 選択肢テキストと一致するものを探す
+                            const correctIndex = q.options.findIndex(opt => opt === correctStr);
+                            if (correctIndex !== -1) {
+                                displayCorrectAns = `${getCircledNumber(correctIndex)}${q.options[correctIndex]}`;
+                            } else {
+                                displayCorrectAns = correctStr; // 見つからない場合はそのまま
+                            }
+                        }
+
+                        // 判定
+                        // ユーザーの回答(index)に対応するテキストが、正解リストのいずれかと一致するか
+                        const userAnsText = userAns !== undefined ? q.options[userAns] : "";
+                        // 正解リストが「④ユキ」形式の場合、「ユキ」部分と比較する必要があるかもしれない
+                        // 逆に、正解リストが「ユキ」で、ユーザー回答がindex 3の場合
+                        
+                        // シンプルに：正解リストの中に「ユーザーが選んだ選択肢のテキスト」が含まれているか
+                        // または、「丸数字+テキスト」が含まれているか
+                        const userAnsFull = userAns !== undefined ? `${getCircledNumber(userAns)}${q.options[userAns]}` : "";
+                        
+                        isCorrect = q.correctAnswerList.some(ans => {
+                            return ans === userAnsText || ans === userAnsFull;
+                        });
+
                     } else {
+                        // 記述式
                         displayUserAns = userAns || "未回答";
-                        displayCorrectAns = q.correctAnswer;
-                        isCorrect = userAns === q.correctAnswer; 
+                        displayCorrectAns = q.correctAnswerList.join(" / ");
+                        isCorrect = q.correctAnswerList.includes(userAns);
                     }
+
                     if (isCorrect) totalScore += q.points;
                     return { id: q.id, userAns: displayUserAns, correctAns: displayCorrectAns, isCorrect, explanationPath: q.explanationPath };
                 });
                 return { grading, totalScore };
-            }, [userAnswers]);
+            }, [userAnswers, config]);
 
             return (
                 <div className="flex flex-col h-full bg-white font-sans overflow-hidden">
@@ -593,7 +625,6 @@
                     answerText = userAnswer;
                 }
             }
-            // 背景色の決定: アクティブなら赤、回答済みならグレー、それ以外は白
             const bgClass = isActive ? 'bg-red-50' : (isAnswered ? 'bg-gray-200' : 'bg-white');
             const textClass = isAnswered ? 'text-gray-600' : 'text-gray-800';
 
@@ -613,11 +644,11 @@
                              <AsyncImage src={q.imagePath} className="w-full h-full object-cover" />
                         </div>
 
-                        {/* 下段左: しおりと解答 (Flexboxで並べて重なり回避) */}
-                        <div className="col-start-1 row-start-2 flex items-end self-end h-full relative">
-                            <div className="flex items-center w-full">
-                                {isBookmarked && <div className="mr-2 text-red-600 flex-shrink-0"><i className="fas fa-bookmark text-xl"></i></div>}
-                                {isAnswered && <span className="text-sm font-bold truncate flex-1 min-w-0">{answerText}</span>}
+                        {/* 下段左: しおりと解答 */}
+                        <div className="col-start-1 row-start-2 flex items-end self-end h-full relative w-full overflow-hidden">
+                            <div className="flex items-center w-full gap-2">
+                                {isBookmarked && <div className="text-red-600 flex-shrink-0"><i className="fas fa-bookmark text-xl"></i></div>}
+                                {isAnswered && <span className="text-sm font-bold truncate flex-1 min-w-0 text-left">{answerText}</span>}
                             </div>
                         </div>
                     </div>
@@ -629,16 +660,104 @@
             const [screen, setScreen] = useState('start');
             const [userName, setUserName] = useState("");
             const [finalAnswers, setFinalAnswers] = useState({});
+            const [config, setConfig] = useState([]);
+            const [loading, setLoading] = useState(true);
+
+            // CSV Parse Logic
+            useEffect(() => {
+                const loadConfig = async () => {
+                    try {
+                        const response = await fetch(CSV_PATH);
+                        if (!response.ok) throw new Error('CSV not found');
+                        const text = await response.text();
+                        
+                        const lines = text.split(/\r\n|\n/).filter(line => line.trim() !== '');
+                        if (lines.length < 1) throw new Error('Empty CSV');
+
+                        // Line 1: total, selection count
+                        const [totalStr, selCountStr] = lines[0].split(',');
+                        const totalQuestions = parseInt(totalStr, 10);
+                        const selectionCount = parseInt(selCountStr, 10);
+
+                        // Selection Map
+                        const selectionMap = {};
+                        for (let i = 1; i <= selectionCount; i++) {
+                            const cols = lines[i].split(',');
+                            const qId = parseInt(cols[0], 10);
+                            const options = cols.slice(1).filter(opt => opt && opt.trim() !== '');
+                            selectionMap[qId] = options;
+                        }
+
+                        // Questions Map (id -> config)
+                        // Initialize basic config for 1..total
+                        const tempConfig = [];
+                        
+                        // Parse Answers (from line selectionCount + 1 to end)
+                        // "現在がi行ならi-n-1問目の正解" -> 
+                        // CSV lines index 0 is Header. 
+                        // Lines 1..n are selections.
+                        // Lines n+1.. are answers. 
+                        // Line index k (where k starts at n+1) corresponds to Question (k - n).
+                        
+                        const startAnswerLine = selectionCount + 1;
+                        
+                        for (let i = 0; i < totalQuestions; i++) {
+                            const lineIdx = startAnswerLine + i;
+                            if (lineIdx >= lines.length) break;
+                            
+                            const cols = lines[lineIdx].split(',');
+                            const points = parseInt(cols[0], 10) || 0;
+                            // Remaining cols are valid answers
+                            const validAnswers = cols.slice(1).filter(a => a && a.trim() !== '');
+                            
+                            const qId = i + 1;
+                            const isSelection = !!selectionMap[qId];
+                            
+                            tempConfig.push({
+                                id: qId,
+                                imagePath: `riddle/riddle1/riddle1_${String(qId).padStart(2, '0')}.png`,
+                                explanationPath: `riddle/riddle1/answer_${String(qId).padStart(2, '0')}.jfif`,
+                                points: points,
+                                type: isSelection ? 'choice' : 'text',
+                                options: selectionMap[qId] || [],
+                                correctAnswerList: validAnswers
+                            });
+                        }
+                        
+                        setConfig(tempConfig);
+                        setLoading(false);
+
+                    } catch (e) {
+                        console.error("CSV Load Error:", e);
+                        // Fallback or Alert? 
+                        // For demo, create a minimal dummy config if fetch fails (e.g. local file open)
+                        // But since user puts it on server, it should work. 
+                        // If local, we can't do much without a server.
+                        // Display error state
+                        setLoading(false);
+                    }
+                };
+
+                loadConfig();
+            }, []);
 
             const startExam = (name) => { setUserName(name); setScreen('exam'); };
             const finishExam = (answers) => { setFinalAnswers(answers); setScreen('finish'); };
             const restart = () => { setFinalAnswers({}); setScreen('start'); };
 
+            if (loading) {
+                return <div className="h-screen w-full flex items-center justify-center bg-white font-sans">設定データを読み込み中...</div>;
+            }
+
+            if (config.length === 0) {
+                return <div className="h-screen w-full flex items-center justify-center bg-white font-sans text-red-600">設定データの読み込みに失敗しました。<br/>riddle/riddle1/riddle1.csv を配置してください。</div>;
+            }
+
             return (
                 <div className="h-screen w-full font-sans border-[8px] border-red-600 box-border overflow-hidden">
                     {screen === 'start' && <StartScreen onStart={startExam} initialName={userName} />}
-                    {screen === 'exam' && <ExamScreen userName={userName} onFinish={finishExam} />}
-                    {screen === 'finish' && <FinishScreen userAnswers={finalAnswers} onRestart={restart} />}
+                    {screen === 'exam' && <ExamScreen userName={userName} onFinish={finishExam} config={config} />}
+                    {screen === 'finish' && <FinishScreen userAnswers={finalAnswers} onRestart={restart} config={config} />}
                 </div>
             );
         };
