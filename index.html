@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>謎検もどき</title>
+    <title>謎解き能力検定 2025秋</title>
     
     <!-- React & ReactDOM -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -49,7 +49,11 @@
         }
     </style>
 </head>
-<body class="bg-gray-100 text-gray-800 h-screen w-screen overflow-hidden">
+<body class="text-gray-800 h-screen w-screen overflow-hidden relative">
+    
+    <!-- Fixed Background Layer -->
+    <div style="position: absolute; inset: 0; z-index: -1; background-image: url('deco/back.png'); background-repeat: repeat; background-position: center; opacity: 0.5;"></div>
+
     <div id="root" class="h-full w-full"></div>
 
     <script type="text/babel">
@@ -109,8 +113,8 @@
         const StartScreen = ({ onStart, initialName }) => {
             const [handleName, setHandleName] = useState(initialName || "");
             return (
-                <div className="flex flex-col items-center justify-center h-full bg-white p-4 overflow-y-auto">
-                    <div className="max-w-4xl w-full bg-white p-8 space-y-8">
+                <div className="flex flex-col items-center justify-center h-full p-4 overflow-y-auto relative z-10">
+                    <div className="max-w-4xl w-full bg-white p-8 space-y-8 shadow-xl rounded-lg">
                         <div className="border-b-2 border-red-600 pb-4 mb-8 flex justify-between items-end">
                             <div className="h-12">
                                 <img src="deco/logo.png" alt="ロゴ" className="h-full object-contain" />
@@ -214,6 +218,7 @@
                 if (!ctx || !canvas) return;
                 const pos = getPos(e);
                 currentStroke.current.push(pos);
+                
                 ctx.save();
                 ctx.setTransform(1, 0, 0, 1, 0, 0);
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -393,7 +398,7 @@
             }
 
             return (
-                <div className="flex flex-col h-full bg-gray-200 font-sans">
+                <div className="flex flex-col h-full font-sans relative z-10">
                     <ConfirmationModal isOpen={modalConfig.isOpen} message={modalConfig.message} onConfirm={modalConfig.onConfirm} onCancel={() => setModalConfig(prev => ({ ...prev, isOpen: false }))} />
                     <div className="bg-white border-b border-red-500 h-14 flex items-center justify-between px-4 shrink-0 z-20">
                         <div className="flex items-center space-x-4">
@@ -408,11 +413,11 @@
                     </div>
                     <div className="flex flex-1 overflow-hidden relative">
                         <div className="flex-1 flex flex-col relative z-0 h-full overflow-hidden">
-                            <div className="flex-1 bg-gray-100 flex items-center justify-center p-2 md:p-4 overflow-hidden relative">
+                            <div className="flex-1 flex items-center justify-center p-2 md:p-4 overflow-hidden relative"> {/* Transparent bg */}
                                 <div className="w-full h-full max-w-5xl relative flex items-center justify-center">
                                     {currentQIndex > 0 && <button onClick={() => navigate('prev')} className="absolute left-0 top-1/2 -translate-y-1/2 z-30 bg-white/50 hover:bg-white rounded-full p-2 text-gray-600 shadow-lg transform -translate-x-1/2 md:translate-x-0 w-16 h-16 flex items-center justify-center"><i className="fas fa-chevron-left text-3xl"></i><div className="absolute -bottom-4 text-xs text-center font-number bg-white/80 px-1 rounded">{String(currentQIndex).padStart(2,'0')}</div></button>}
                                     {currentQIndex < config.length - 1 && <button onClick={() => navigate('next')} className="absolute right-0 top-1/2 -translate-y-1/2 z-30 bg-white/50 hover:bg-white rounded-full p-2 text-gray-600 shadow-lg transform translate-x-1/2 md:translate-x-0 w-16 h-16 flex items-center justify-center"><i className="fas fa-chevron-right text-3xl"></i><div className="absolute -bottom-4 text-xs text-center font-number bg-white/80 px-1 rounded">{String(currentQIndex + 2).padStart(2,'0')}</div></button>}
-                                    <div className="relative w-full h-full select-none flex items-center justify-center">
+                                    <div className="relative w-full h-full select-none flex items-center justify-center bg-white shadow-lg"> {/* Added bg-white to question area */}
                                         <AsyncImage src={currentQ.imagePath} alt={`Problem ${currentQ.id}`} className="max-w-full max-h-full object-contain pointer-events-none" fallback={<div className="absolute inset-0 w-full h-full bg-gray-50 flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-300 flex"><i className="fas fa-image text-4xl mb-2"></i><span className="text-xl font-bold text-gray-500">問題 {currentQ.id}</span><span className="text-xs mt-2">画像を配置してください: {currentQ.imagePath}</span></div>} />
                                         <div className="absolute inset-0 w-full h-full"><CanvasLayer drawings={drawings[currentQ.id] || []} onDrawEnd={handleDrawEnd} tool={tool} color={color} isVisible={isToolbarVisible} /></div>
                                     </div>
@@ -511,8 +516,8 @@
                         } else {
                             displayUserAns = "未回答";
                         }
-                        // CSV answer handling
-                        const correctStr = q.correctAnswerList[0] || ""; 
+                        const correctStr = q.primaryAnswer || ""; // Using explicit primary answer from CSV column 2
+                        
                         const hasCircle = /^[\u2460-\u2469]/.test(correctStr);
                         if (hasCircle) {
                             displayCorrectAns = correctStr;
@@ -529,8 +534,8 @@
                         isCorrect = q.correctAnswerList.some(ans => ans === userAnsText || ans === userAnsFull);
                     } else {
                         displayUserAns = userAns || "未回答";
-                        // 記述式の正解表示：CSVの2列目（明示的にパースしたprimaryAnswer）のみを表示
-                        displayCorrectAns = q.primaryAnswer;
+                        // Display ONLY the primary answer (2nd column in CSV)
+                        displayCorrectAns = q.primaryAnswer || "";
                         isCorrect = q.correctAnswerList.includes(userAns);
                     }
 
@@ -541,12 +546,12 @@
             }, [userAnswers, config]);
 
             return (
-                <div className="flex flex-col h-full bg-white font-sans overflow-hidden">
+                <div className="flex flex-col h-full font-sans overflow-hidden relative z-10">
                      <div className="border-b-2 border-red-600 p-4 flex justify-between items-center bg-white shrink-0">
                         <h1 className="text-2xl font-bold text-red-600">受検結果</h1>
                         <div className="text-xl font-bold">合計得点: <span className="text-3xl text-red-600 font-number">{results.totalScore}</span> / 100点</div>
                     </div>
-                    <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-gray-50">
+                    <div className="flex-1 overflow-y-auto p-4 md:p-8">
                         <div className="max-w-5xl mx-auto bg-white shadow rounded-lg overflow-hidden">
                             <table className="w-full text-left border-collapse">
                                 <thead className="bg-gray-100 border-b border-gray-300">
@@ -683,7 +688,7 @@
                             
                             tempConfig.push({
                                 id: qId,
-                                imagePath: `riddle/riddle1/riddle1_${String(qId).padStart(2, '0')}.jfif`,
+                                imagePath: `riddle/riddle1/riddle1_${String(qId).padStart(2, '0')}.png`,
                                 explanationPath: `riddle/riddle1/answer_${String(qId).padStart(2, '0')}.jfif`,
                                 points: points,
                                 type: isSelection ? 'choice' : 'text',
@@ -718,7 +723,15 @@
             }
 
             return (
-                <div className="h-screen w-full font-sans border-[8px] border-red-600 box-border overflow-hidden">
+                <div className="h-screen w-full font-sans border-[8px] border-red-600 box-border overflow-hidden relative">
+                    {/* Fixed Background Layer */}
+                    <div className="absolute inset-0 z-[-1]" style={{
+                        backgroundImage: "url('deco/back.png')",
+                        backgroundRepeat: 'repeat',
+                        backgroundPosition: 'center',
+                        opacity: 0.5,
+                    }}></div>
+
                     {screen === 'start' && <StartScreen onStart={startExam} initialName={userName} />}
                     {screen === 'exam' && <ExamScreen userName={userName} onFinish={finishExam} config={config} />}
                     {screen === 'finish' && <FinishScreen userAnswers={finalAnswers} onRestart={restart} config={config} />}
