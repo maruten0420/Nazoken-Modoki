@@ -39,7 +39,7 @@ const QUESTION_CONFIG = Array.from({ length: TOTAL_QUESTIONS }, (_, i) => {
     const isMultipleChoice = [11, 12, 13, 50].includes(id); 
     return {
         id: id,
-        imagePath: `riddle1/riddle1_${String(id).padStart(2, '0')}.png`,
+        imagePath: `riddle1/riddle1_${String(id).padStart(2, '0')}.jfjf`,
         points: 2,
         type: isMultipleChoice ? 'choice' : 'text',
         options: isMultipleChoice ? ['イモ', 'チゲ', 'ツル', 'ユキ'] : [],
