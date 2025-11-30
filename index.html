@@ -14,38 +14,32 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome (Icons) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Fonts -->
-    <!-- Oswald: DINの代替として数字に使用 -->
+    <!-- Google Fonts: Oswald (DIN-like), Noto Sans JP -->
     <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
-    <!-- YakuHanJP: 日本語約物フォント -->
+    <!-- YakuHanJP -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/yakuhanjp@3.4.1/dist/css/yakuhanjp.min.css">
     
     <style>
         body { 
             font-family: YakuHanJP, "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
             user-select: none; 
-            touch-action: none; /* 全体でのスクロール防止（必要に応じて） */
+            touch-action: none; 
             overflow: hidden; 
         }
 
-        /* 数字用フォントクラス */
         .font-number {
             font-family: 'Oswald', sans-serif;
             letter-spacing: 0.05em;
         }
         
-        /* スクロールバー */
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #888; }
         
-        /* カーソル */
         .cursor-pen { cursor: crosshair; }
         .cursor-eraser { cursor: cell; } 
 
-        /* アニメーション */
         @keyframes fadeIn {
             from { opacity: 0; }
             to { opacity: 1; }
@@ -78,7 +72,7 @@
             const isMultipleChoice = [11, 12, 13, 50].includes(id); 
             return {
                 id: id,
-                imagePath: `riddle/riddle1/riddle1_${String(id).padStart(2, '0')}.jfif`,
+                imagePath: `riddle/riddle1/riddle1_${String(id).padStart(2, '0')}.png`,
                 explanationPath: `riddle/riddle1/answer_${String(id).padStart(2, '0')}.jfif`,
                 points: 2,
                 type: isMultipleChoice ? 'choice' : 'text',
@@ -97,7 +91,7 @@
         const ConfirmationModal = ({ isOpen, message, onConfirm, onCancel }) => {
             if (!isOpen) return null;
             return (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" style={{ touchAction: 'none' }}>
                     <div className="bg-white rounded-lg shadow-xl p-6 max-w-sm w-full border-2 border-red-600 animate-fade-in">
                         <h3 className="text-lg font-bold mb-4 text-gray-800">確認</h3>
                         <p className="text-gray-600 mb-6">{message}</p>
@@ -123,11 +117,11 @@
                 img.onerror = () => { setLoading(false); setError(true); };
             }, [src]);
 
-            if (error) return fallback || <div className="flex flex-col items-center text-gray-400 p-2 bg-gray-100 h-full w-full justify-center"><i className="fas fa-image text-2xl mb-1"></i><span className="text-[10px]">No Image</span></div>;
+            if (error) return fallback || <div className="flex flex-col items-center text-gray-400 p-2 justify-center h-full"><i className="fas fa-image text-2xl mb-1"></i><span className="text-[10px] mt-1">No Image</span></div>;
 
             return (
                 <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
-                    {loading && <div className="absolute inset-0 flex items-center justify-center bg-gray-100 text-gray-400 font-bold text-xs z-0">Loading...</div>}
+                    {loading && <div className="absolute inset-0 flex items-center justify-center bg-gray-50 text-gray-400 font-bold text-xs z-0 font-number">Loading...</div>}
                     <img src={src} alt={alt} className={`${className} ${loading ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`} />
                 </div>
             );
@@ -139,12 +133,12 @@
                 <div className="flex flex-col items-center justify-center h-full bg-white p-4 overflow-y-auto">
                     <div className="max-w-4xl w-full bg-white p-8 space-y-8">
                         <div className="border-b-2 border-red-600 pb-4 mb-8 flex justify-between items-end">
-                            <h1 className="text-3xl font-bold text-red-600">謎解き能力検定 2025秋</h1>
-                            <div className="text-sm text-gray-500">受検番号: {handleName || "未入力"}</div>
+                            <h1 className="text-3xl font-bold text-red-600">謎検もどき</h1>
+                            <div className="text-sm text-gray-500">ユーザーネーム: {handleName || "未入力"}</div>
                         </div>
                         <div className="space-y-6">
                             <div className="bg-gray-50 p-6 rounded border border-gray-200">
-                                <label className="block text-gray-700 font-bold mb-2">ハンドルネーム (受検番号)</label>
+                                <label className="block text-gray-700 font-bold mb-2">ユーザーネーム</label>
                                 <input type="text" className="w-full border-2 border-gray-300 p-3 rounded focus:outline-none focus:border-red-500 text-lg" placeholder="ここに入力してください" value={handleName} onChange={(e) => setHandleName(e.target.value)} />
                             </div>
                             <div className="bg-gray-50 p-6 rounded border border-gray-200">
@@ -165,53 +159,51 @@
             );
         };
 
-        // --- Canvas Layer (High Performance) ---
         const CanvasLayer = ({ drawings, onDrawEnd, tool, color, isVisible }) => {
             const canvasRef = useRef(null);
             const isDrawing = useRef(false);
             const currentStroke = useRef([]);
             const ctxRef = useRef(null);
 
-            // Initial render and resize
             useEffect(() => {
                 const canvas = canvasRef.current;
                 if (!canvas) return;
-                
                 const updateSize = () => {
-                    // Match parent size
                     const parent = canvas.parentElement;
                     if(parent) {
-                        canvas.width = parent.clientWidth;
-                        canvas.height = parent.clientHeight;
+                        const dpr = window.devicePixelRatio || 1;
+                        canvas.width = parent.clientWidth * dpr;
+                        canvas.height = parent.clientHeight * dpr;
+                        canvas.style.width = `${parent.clientWidth}px`;
+                        canvas.style.height = `${parent.clientHeight}px`;
+                        const ctx = canvas.getContext('2d');
+                        ctx.scale(dpr, dpr);
+                        ctx.lineCap = 'round';
+                        ctx.lineJoin = 'round';
+                        ctxRef.current = ctx;
                         redrawAll();
                     }
                 };
-                
                 updateSize();
                 window.addEventListener('resize', updateSize);
                 return () => window.removeEventListener('resize', updateSize);
-            }, [drawings]); // Redraw when history changes from undo/redo
+            }, [drawings]);
 
             const redrawAll = () => {
                 const canvas = canvasRef.current;
-                if (!canvas) return;
-                const ctx = canvas.getContext('2d');
+                const ctx = ctxRef.current;
+                if (!canvas || !ctx) return;
+                ctx.save();
+                ctx.setTransform(1, 0, 0, 1, 0, 0);
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctxRef.current = ctx;
-
+                ctx.restore();
                 if (!isVisible) return;
-
-                drawings.forEach(stroke => {
-                    drawStroke(ctx, stroke);
-                });
+                drawings.forEach(stroke => drawStroke(ctx, stroke));
             };
 
             const drawStroke = (ctx, stroke) => {
                 if (stroke.points.length < 1) return;
                 ctx.beginPath();
-                ctx.lineCap = 'round';
-                ctx.lineJoin = 'round';
-                
                 if (stroke.tool === 'eraser') {
                     ctx.globalCompositeOperation = 'destination-out';
                     ctx.lineWidth = 20;
@@ -220,7 +212,6 @@
                     ctx.lineWidth = 3;
                     ctx.strokeStyle = stroke.color === 'black' ? '#000' : stroke.color === 'red' ? '#ff0000' : '#0000ff';
                 }
-
                 if (stroke.tool === 'line' && stroke.points.length > 1) {
                     const start = stroke.points[0];
                     const end = stroke.points[stroke.points.length - 1];
@@ -233,29 +224,20 @@
                     }
                 }
                 ctx.stroke();
-                // Reset to default
                 ctx.globalCompositeOperation = 'source-over';
             };
 
-            // Direct drawing for performance
             const drawLive = (e) => {
                 const ctx = ctxRef.current;
-                if (!ctx) return;
-
+                const canvas = canvasRef.current;
+                if (!ctx || !canvas) return;
                 const pos = getPos(e);
                 currentStroke.current.push(pos);
-
-                // Clear and redraw everything to show live updates (needed for lines and eraser)
-                // For simple pencil, we could optimize to just draw the new segment, but clearing ensures consistency
-                // Optimization: For pencil, just draw next segment? No, because of eraser logic.
-                // Simple redraw strategy is robust.
-                
-                ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-                
-                // Draw past strokes
+                ctx.save();
+                ctx.setTransform(1, 0, 0, 1, 0, 0);
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.restore();
                 drawings.forEach(s => drawStroke(ctx, s));
-                
-                // Draw current stroke
                 drawStroke(ctx, { tool, color, points: currentStroke.current });
             };
 
@@ -273,7 +255,6 @@
 
             const handlePointerMove = (e) => {
                 if (!isDrawing.current || !isVisible) return;
-                // e.preventDefault() is handled by CSS touch-action: none
                 drawLive(e);
             };
 
@@ -281,32 +262,20 @@
                 if (!isDrawing.current) return;
                 e.currentTarget.releasePointerCapture(e.pointerId);
                 isDrawing.current = false;
-                
                 if (currentStroke.current.length > 0) {
                     onDrawEnd({ tool, color, points: [...currentStroke.current] });
                 }
                 currentStroke.current = [];
             };
 
-            // Redraw when visibility or props change
-            useEffect(() => {
-                redrawAll();
-            }, [drawings, isVisible, tool, color]);
+            useEffect(() => { redrawAll(); }, [drawings, isVisible, tool, color]);
 
             return (
                 <div className={`absolute inset-0 w-full h-full z-10 ${!isVisible ? 'pointer-events-none' : ''}`} style={{ touchAction: 'none' }}>
-                    <canvas 
-                        ref={canvasRef} 
-                        onPointerDown={handlePointerDown}
-                        onPointerMove={handlePointerMove}
-                        onPointerUp={handlePointerUp}
-                        onPointerLeave={handlePointerUp} // Handle leaving canvas as end
-                        className={`w-full h-full touch-none ${tool === 'eraser' ? 'cursor-eraser' : 'cursor-pen'}`} 
-                    />
+                    <canvas ref={canvasRef} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerLeave={handlePointerUp} className={`w-full h-full touch-none ${tool === 'eraser' ? 'cursor-eraser' : 'cursor-pen'}`} />
                 </div>
             );
         };
-
 
         const ExamScreen = ({ userName, onFinish }) => {
             const [currentQIndex, setCurrentQIndex] = useState(0);
@@ -315,19 +284,14 @@
             const [bookmarks, setBookmarks] = useState({});
             const [timeLeft, setTimeLeft] = useState(TIME_LIMIT_MINUTES * 60);
             const [isMenuOpen, setIsMenuOpen] = useState(false);
-            
-            // Drawing State
-            const [drawings, setDrawings] = useState({}); // { 1: [strokes], 2: [] }
+            const [drawings, setDrawings] = useState({});
             const [redoStack, setRedoStack] = useState({});
-            
             const [tool, setTool] = useState('pencil');
             const [color, setColor] = useState('black');
             const [isToolbarVisible, setIsToolbarVisible] = useState(true);
             const [modalConfig, setModalConfig] = useState({ isOpen: false, message: '', onConfirm: () => {} });
             const [isTimeUp, setIsTimeUp] = useState(false);
-            
             const itemRefs = useRef({});
-            const listContainerRef = useRef(null);
             const currentQ = QUESTION_CONFIG[currentQIndex];
 
             useEffect(() => {
@@ -352,8 +316,7 @@
             }, [isTimeUp, answers, onFinish]);
 
             useEffect(() => {
-                const currentId = QUESTION_CONFIG[currentQIndex].id;
-                const element = itemRefs.current[currentId];
+                const element = itemRefs.current[currentQ.id];
                 if (element) element.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }, [currentQIndex]);
 
@@ -379,31 +342,17 @@
                 }, 300);
             };
 
-            const resetAnswer = () => {
-                setLockedAnswers(prev => { const next = { ...prev }; delete next[currentQ.id]; return next; });
-            };
-
+            const resetAnswer = () => setLockedAnswers(prev => { const next = { ...prev }; delete next[currentQ.id]; return next; });
             const toggleBookmark = (id) => setBookmarks(prev => ({ ...prev, [id]: !prev[id] }));
-
             const navigate = (direction) => {
                 if (direction === 'prev' && currentQIndex > 0) setCurrentQIndex(curr => curr - 1);
                 if (direction === 'next' && currentQIndex < TOTAL_QUESTIONS - 1) setCurrentQIndex(curr => curr + 1);
             };
-
             const confirmAction = (message, action) => {
-                setModalConfig({
-                    isOpen: true,
-                    message,
-                    onConfirm: () => {
-                        action();
-                        setModalConfig(prev => ({ ...prev, isOpen: false }));
-                    }
-                });
+                setModalConfig({ isOpen: true, message, onConfirm: () => { action(); setModalConfig(prev => ({ ...prev, isOpen: false })); } });
             };
-
             const handleFinish = () => onFinish(answers);
 
-            // Keyboard Nav
             useEffect(() => {
                 const handleKeyDown = (e) => {
                     if (e.target.tagName === 'INPUT') return;
@@ -414,18 +363,13 @@
                 return () => window.removeEventListener('keydown', handleKeyDown);
             }, [currentQIndex]);
 
-            // Callback when a stroke is finished
-            const handleDrawEnd = (newStroke) => {
+            const handleDrawEnd = useCallback((newStroke) => {
                 setDrawings(prev => {
                     const qDrawings = prev[currentQ.id] || [];
                     return { ...prev, [currentQ.id]: [...qDrawings, newStroke] };
                 });
-                setRedoStack(prev => {
-                    const next = { ...prev };
-                    delete next[currentQ.id]; // Clear redo stack on new draw
-                    return next;
-                });
-            };
+                setRedoStack(prev => { const next = { ...prev }; delete next[currentQ.id]; return next; });
+            }, [currentQ.id]);
 
             const undo = () => {
                 setDrawings(prev => {
@@ -437,22 +381,16 @@
                     return { ...prev, [currentQ.id]: remaining };
                 });
             };
-
             const redo = () => {
                 setRedoStack(prev => {
                     const qRedos = prev[currentQ.id] || [];
                     if (qRedos.length === 0) return prev;
                     const toRestore = qRedos[qRedos.length - 1];
                     setDrawings(dPrev => ({ ...dPrev, [currentQ.id]: [...(dPrev[currentQ.id] || []), toRestore] }));
-                    return { ...prev, [currentQ.id]: qRedos.slice(0, -1) };
+                    return { ...prev, [currentQ.id]: remaining };
                 });
             };
-
-            const clearAll = () => {
-                // No confirmation as requested
-                setDrawings(prev => ({ ...prev, [currentQ.id]: [] }));
-                setRedoStack(prev => { const next = {...prev}; delete next[currentQ.id]; return next; });
-            };
+            const clearAll = () => { setDrawings(prev => ({ ...prev, [currentQ.id]: [] })); setRedoStack(prev => { const next = {...prev}; delete next[currentQ.id]; return next; }); };
 
             if (isTimeUp) {
                 return (
@@ -467,10 +405,9 @@
             return (
                 <div className="flex flex-col h-full bg-gray-200 font-sans">
                     <ConfirmationModal isOpen={modalConfig.isOpen} message={modalConfig.message} onConfirm={modalConfig.onConfirm} onCancel={() => setModalConfig(prev => ({ ...prev, isOpen: false }))} />
-                    
                     <div className="bg-white border-b border-red-500 h-14 flex items-center justify-between px-4 shrink-0 z-20">
                         <div className="flex items-center space-x-4">
-                            <h1 className="text-xl font-bold text-red-600 tracking-tighter hidden sm:block">謎検もどき</h1>
+                            <h1 className="text-xl font-bold text-red-600 tracking-tighter hidden sm:block">謎検</h1>
                             <div className="text-xs text-gray-500 hidden md:block">ユーザーネーム: {userName}</div>
                             <button onClick={() => confirmAction('受検を終了しますか？(後戻りできません)', handleFinish)} className="border border-gray-400 text-gray-700 px-3 py-1 text-xs hover:bg-gray-100">受検を終了する &gt;</button>
                         </div>
@@ -479,28 +416,18 @@
                             <span className="text-3xl font-mono text-gray-800 leading-none font-number">{formatTime(timeLeft)}</span>
                         </div>
                     </div>
-
                     <div className="flex flex-1 overflow-hidden relative">
                         <div className="flex-1 flex flex-col relative z-0 h-full overflow-hidden">
                             <div className="flex-1 bg-gray-100 flex items-center justify-center p-2 md:p-4 overflow-hidden relative">
                                 <div className="w-full h-full max-w-5xl relative flex items-center justify-center">
-                                    {currentQIndex > 0 && <button onClick={() => navigate('prev')} className="absolute left-0 top-1/2 -translate-y-1/2 z-30 bg-white/50 hover:bg-white rounded-full p-2 text-gray-600 shadow-lg transform -translate-x-1/2 md:translate-x-0 w-12 h-12 flex items-center justify-center"><i className="fas fa-chevron-left text-2xl"></i><div className="absolute -bottom-4 text-xs text-center font-number bg-white/80 px-1 rounded">{String(currentQIndex).padStart(2,'0')}</div></button>}
-                                    {currentQIndex < TOTAL_QUESTIONS - 1 && <button onClick={() => navigate('next')} className="absolute right-0 top-1/2 -translate-y-1/2 z-30 bg-white/50 hover:bg-white rounded-full p-2 text-gray-600 shadow-lg transform translate-x-1/2 md:translate-x-0 w-12 h-12 flex items-center justify-center"><i className="fas fa-chevron-right text-2xl"></i><div className="absolute -bottom-4 text-xs text-center font-number bg-white/80 px-1 rounded">{String(currentQIndex + 2).padStart(2,'0')}</div></button>}
+                                    {currentQIndex > 0 && <button onClick={() => navigate('prev')} className="absolute left-0 top-1/2 -translate-y-1/2 z-30 bg-white/50 hover:bg-white rounded-full p-2 text-gray-600 shadow-lg transform -translate-x-1/2 md:translate-x-0 w-16 h-16 flex items-center justify-center"><i className="fas fa-chevron-left text-3xl"></i><div className="absolute -bottom-4 text-xs text-center font-number bg-white/80 px-1 rounded">{String(currentQIndex).padStart(2,'0')}</div></button>}
+                                    {currentQIndex < TOTAL_QUESTIONS - 1 && <button onClick={() => navigate('next')} className="absolute right-0 top-1/2 -translate-y-1/2 z-30 bg-white/50 hover:bg-white rounded-full p-2 text-gray-600 shadow-lg transform translate-x-1/2 md:translate-x-0 w-16 h-16 flex items-center justify-center"><i className="fas fa-chevron-right text-3xl"></i><div className="absolute -bottom-4 text-xs text-center font-number bg-white/80 px-1 rounded">{String(currentQIndex + 2).padStart(2,'0')}</div></button>}
                                     <div className="relative w-full h-full select-none flex items-center justify-center">
                                         <AsyncImage src={currentQ.imagePath} alt={`Problem ${currentQ.id}`} className="max-w-full max-h-full object-contain pointer-events-none" fallback={<div className="absolute inset-0 w-full h-full bg-gray-50 flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-300 flex"><i className="fas fa-image text-4xl mb-2"></i><span className="text-xl font-bold text-gray-500">問題 {currentQ.id}</span><span className="text-xs mt-2">画像を配置してください: {currentQ.imagePath}</span></div>} />
-                                        <div className="absolute inset-0 w-full h-full">
-                                            <CanvasLayer 
-                                                drawings={drawings[currentQ.id] || []} 
-                                                onDrawEnd={handleDrawEnd} 
-                                                tool={tool} 
-                                                color={color} 
-                                                isVisible={isToolbarVisible}
-                                            />
-                                        </div>
+                                        <div className="absolute inset-0 w-full h-full"><CanvasLayer drawings={drawings[currentQ.id] || []} onDrawEnd={handleDrawEnd} tool={tool} color={color} isVisible={isToolbarVisible} /></div>
                                     </div>
                                 </div>
                             </div>
-
                             <div className="bg-white border-t border-gray-300 p-2 md:p-3 shrink-0 z-20 shadow-md">
                                 <div className="flex justify-center items-center space-x-1 md:space-x-2 mb-2 bg-gray-100 py-1 px-2 rounded-lg inline-block mx-auto min-w-max">
                                     <button onClick={() => setIsToolbarVisible(!isToolbarVisible)} className={`w-10 h-10 flex items-center justify-center rounded border border-transparent text-gray-600 hover:bg-gray-200 ${isToolbarVisible ? 'text-red-600' : ''}`}><i className={`fas ${isToolbarVisible ? 'fa-eye' : 'fa-eye-slash'} text-lg`}></i></button>
@@ -519,7 +446,6 @@
                                         <button onClick={clearAll} className="w-10 h-10 flex items-center justify-center rounded border border-transparent text-gray-600 hover:bg-gray-200"><i className="fas fa-trash-alt text-lg"></i></button>
                                     </div>
                                 </div>
-
                                 <div className="flex items-center space-x-2 md:space-x-4 max-w-4xl mx-auto">
                                     <button onClick={() => toggleBookmark(currentQ.id)} className={`flex flex-col items-center justify-center p-2 w-14 h-14 ${bookmarks[currentQ.id] ? 'bg-gray-800 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'} transition-colors rounded-sm`}>
                                         <div className="text-[9px] mb-0.5 whitespace-nowrap">後で解く</div>
@@ -552,7 +478,6 @@
                                 </div>
                             </div>
                         </div>
-
                         <div className="hidden md:flex w-64 bg-white border-l border-gray-300 flex-col shrink-0 overflow-hidden h-full">
                             <div ref={listContainerRef} className="flex-1 overflow-y-auto custom-scrollbar pb-20">
                                 {QUESTION_CONFIG.map((q) => (
@@ -561,7 +486,6 @@
                             </div>
                         </div>
                     </div>
-
                     {isMenuOpen && (
                         <div className="fixed inset-0 z-50 bg-gray-800/80 flex items-center justify-center p-4">
                             <div className="bg-white w-full h-full max-w-md rounded-lg overflow-hidden flex flex-col relative">
@@ -583,7 +507,6 @@
 
         const FinishScreen = ({ userAnswers, onRestart }) => {
             const [explanationImage, setExplanationImage] = useState(null);
-
             const results = useMemo(() => {
                 let totalScore = 0;
                 const grading = QUESTION_CONFIG.map(q => {
@@ -670,26 +593,32 @@
                     answerText = userAnswer;
                 }
             }
+            // 背景色の決定: アクティブなら赤、回答済みならグレー、それ以外は白
+            const bgClass = isActive ? 'bg-red-50' : (isAnswered ? 'bg-gray-200' : 'bg-white');
+            const textClass = isAnswered ? 'text-gray-600' : 'text-gray-800';
+
             return (
-                <button ref={ref} onClick={onClick} className={`w-full border-b border-gray-200 flex items-stretch text-left h-20 transition-colors ${isActive ? 'bg-red-50' : isAnswered ? 'bg-gray-200 text-gray-600' : 'bg-white text-gray-800'}`}>
+                <button ref={ref} onClick={onClick} className={`w-full border-b border-gray-200 flex items-stretch text-left h-20 transition-colors ${bgClass} ${textClass}`}>
                     <div className={`w-1 shrink-0 ${isActive ? 'bg-red-600' : isBookmarked ? 'bg-red-500' : 'bg-transparent'}`}></div>
-                    <div className="flex-1 p-2 flex flex-col justify-between relative overflow-hidden">
-                        <div className="flex justify-between items-start pl-4 relative">
-                            <div className="flex flex-col">
-                                <span className={`text-2xl font-bold leading-none font-number ${isActive ? 'text-red-600' : isAnswered ? 'text-gray-600' : 'text-gray-800'}`}>{String(q.id).padStart(2, '0')}</span>
-                            </div>
-                            <span className="text-xs font-bold">{q.points}点</span>
+                    
+                    <div className="flex-1 p-2 relative overflow-hidden h-full grid grid-cols-[1fr_auto] grid-rows-2 gap-x-2">
+                        {/* 上段左: 番号と点数 */}
+                        <div className="flex items-center space-x-2 col-start-1 row-start-1 self-start">
+                            <span className={`text-2xl font-bold leading-none font-number ${isActive ? 'text-red-600' : isAnswered ? 'text-gray-600' : 'text-gray-800'}`}>{String(q.id).padStart(2, '0')}</span>
+                            <span className="text-xs text-gray-400">{q.points}点</span>
                         </div>
-                        {isBookmarked && <div className="absolute top-8 left-5 text-red-600"><i className="fas fa-bookmark text-2xl"></i></div>}
-                        
-                        {/* Image always on right */}
-                        <div className="absolute top-1 right-1 bottom-1 w-16 bg-white border border-gray-200 flex items-center justify-center overflow-hidden">
+
+                        {/* 右側全体: 画像 (Rowspan 2) */}
+                        <div className="col-start-2 row-start-1 row-end-3 w-16 h-full bg-white border border-gray-200 flex items-center justify-center overflow-hidden self-center">
                              <AsyncImage src={q.imagePath} className="w-full h-full object-cover" />
                         </div>
 
-                        {/* Answer text bottom left */}
-                        <div className="flex justify-start items-end h-full mt-4 pl-4">
-                            {isAnswered && <span className="text-sm font-bold truncate max-w-[100px]">{answerText}</span>}
+                        {/* 下段左: しおりと解答 (Flexboxで並べて重なり回避) */}
+                        <div className="col-start-1 row-start-2 flex items-end self-end h-full relative">
+                            <div className="flex items-center w-full">
+                                {isBookmarked && <div className="mr-2 text-red-600 flex-shrink-0"><i className="fas fa-bookmark text-xl"></i></div>}
+                                {isAnswered && <span className="text-sm font-bold truncate flex-1 min-w-0">{answerText}</span>}
+                            </div>
                         </div>
                     </div>
                 </button>
@@ -703,7 +632,7 @@
 
             const startExam = (name) => { setUserName(name); setScreen('exam'); };
             const finishExam = (answers) => { setFinalAnswers(answers); setScreen('finish'); };
-            const restart = () => { setFinalAnswers({}); setScreen('start'); }; // Keep userName
+            const restart = () => { setFinalAnswers({}); setScreen('start'); };
 
             return (
                 <div className="h-screen w-full font-sans border-[8px] border-red-600 box-border overflow-hidden">
