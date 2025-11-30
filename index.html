@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>謎解き能力検定 2025秋</title>
+    <title>謎検もどき</title>
     
     <!-- React & ReactDOM -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -112,7 +112,9 @@
                 <div className="flex flex-col items-center justify-center h-full bg-white p-4 overflow-y-auto">
                     <div className="max-w-4xl w-full bg-white p-8 space-y-8">
                         <div className="border-b-2 border-red-600 pb-4 mb-8 flex justify-between items-end">
-                            <h1 className="text-3xl font-bold text-red-600">謎解き能力検定 2025秋</h1>
+                            <div className="h-12">
+                                <img src="deco/logo.png" alt="ロゴ" className="h-full object-contain" />
+                            </div>
                             <div className="text-sm text-gray-500">ユーザーネーム: {handleName || "未入力"}</div>
                         </div>
                         <div className="space-y-6">
@@ -213,7 +215,6 @@
                 const pos = getPos(e);
                 currentStroke.current.push(pos);
                 
-                // 部分描画ではなく全描画（消しゴム対応のため）
                 ctx.save();
                 ctx.setTransform(1, 0, 0, 1, 0, 0);
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -232,7 +233,6 @@
                 e.currentTarget.setPointerCapture(e.pointerId);
                 isDrawing.current = true;
                 currentStroke.current = [getPos(e)];
-                // 初期点描画
                 const ctx = ctxRef.current;
                 if(ctx) {
                     ctx.beginPath();
@@ -398,7 +398,7 @@
                     <ConfirmationModal isOpen={modalConfig.isOpen} message={modalConfig.message} onConfirm={modalConfig.onConfirm} onCancel={() => setModalConfig(prev => ({ ...prev, isOpen: false }))} />
                     <div className="bg-white border-b border-red-500 h-14 flex items-center justify-between px-4 shrink-0 z-20">
                         <div className="flex items-center space-x-4">
-                            <h1 className="text-xl font-bold text-red-600 tracking-tighter hidden sm:block">謎検</h1>
+                            <div className="h-8"><img src="deco/logo.png" alt="ロゴ" className="h-full object-contain" /></div>
                             <div className="text-xs text-gray-500 hidden md:block">ユーザーネーム: {userName}</div>
                             <button onClick={() => confirmAction('受検を終了しますか？(後戻りできません)', handleFinish)} className="border border-gray-400 text-gray-700 px-3 py-1 text-xs hover:bg-gray-100">受検を終了する &gt;</button>
                         </div>
@@ -507,17 +507,14 @@
                     let displayCorrectAns = "-";
                     
                     if (q.type === 'choice') {
-                        // User Answer formatting
                         if (userAns !== undefined) {
                             displayUserAns = `${getCircledNumber(userAns)}${q.options[userAns]}`;
                         } else {
                             displayUserAns = "未回答";
                         }
-                        
-                        // Correct Answer formatting
+                        // CSV answer handling
                         const correctStr = q.correctAnswerList[0] || ""; 
                         const hasCircle = /^[\u2460-\u2469]/.test(correctStr);
-                        
                         if (hasCircle) {
                             displayCorrectAns = correctStr;
                         } else {
@@ -525,21 +522,16 @@
                             if (correctIndex !== -1) {
                                 displayCorrectAns = `${getCircledNumber(correctIndex)}${q.options[correctIndex]}`;
                             } else {
-                                displayCorrectAns = correctStr; 
+                                displayCorrectAns = correctStr;
                             }
                         }
-
                         const userAnsText = userAns !== undefined ? q.options[userAns] : "";
                         const userAnsFull = userAns !== undefined ? `${getCircledNumber(userAns)}${q.options[userAns]}` : "";
-                        
-                        isCorrect = q.correctAnswerList.some(ans => {
-                            return ans === userAnsText || ans === userAnsFull;
-                        });
-
+                        isCorrect = q.correctAnswerList.some(ans => ans === userAnsText || ans === userAnsFull);
                     } else {
-                        // 記述式
                         displayUserAns = userAns || "未回答";
-                        displayCorrectAns = q.correctAnswerList.join(" / ");
+                        // 記述式の正解表示：CSVの2列目のみを表示
+                        displayCorrectAns = q.correctAnswerList[0] || "";
                         isCorrect = q.correctAnswerList.includes(userAns);
                     }
 
@@ -651,23 +643,22 @@
             const [config, setConfig] = useState([]);
             const [loading, setLoading] = useState(true);
 
-            // CSV Parse Logic
             useEffect(() => {
                 const loadConfig = async () => {
                     try {
                         const response = await fetch(CSV_PATH);
                         if (!response.ok) throw new Error('CSV not found');
-                        const text = await response.text();
+                        const buffer = await response.arrayBuffer();
+                        const decoder = new TextDecoder('shift_jis');
+                        const text = decoder.decode(buffer);
                         
                         const lines = text.split(/\r\n|\n/).filter(line => line.trim() !== '');
                         if (lines.length < 1) throw new Error('Empty CSV');
 
-                        // Line 1: total, selection count
                         const [totalStr, selCountStr] = lines[0].split(',');
                         const totalQuestions = parseInt(totalStr, 10);
                         const selectionCount = parseInt(selCountStr, 10);
 
-                        // Selection Map
                         const selectionMap = {};
                         for (let i = 1; i <= selectionCount; i++) {
                             const cols = lines[i].split(',');
@@ -676,17 +667,7 @@
                             selectionMap[qId] = options;
                         }
 
-                        // Questions Map (id -> config)
-                        // Initialize basic config for 1..total
                         const tempConfig = [];
-                        
-                        // Parse Answers (from line selectionCount + 1 to end)
-                        // "現在がi行ならi-n-1問目の正解" -> 
-                        // CSV lines index 0 is Header. 
-                        // Lines 1..n are selections.
-                        // Lines n+1.. are answers. 
-                        // Line index k (where k starts at n+1) corresponds to Question (k - n).
-                        
                         const startAnswerLine = selectionCount + 1;
                         
                         for (let i = 0; i < totalQuestions; i++) {
@@ -695,7 +676,6 @@
                             
                             const cols = lines[lineIdx].split(',');
                             const points = parseInt(cols[0], 10) || 0;
-                            // Remaining cols are valid answers
                             const validAnswers = cols.slice(1).filter(a => a && a.trim() !== '');
                             
                             const qId = i + 1;
@@ -703,7 +683,7 @@
                             
                             tempConfig.push({
                                 id: qId,
-                                imagePath: `riddle/riddle1/riddle1_${String(qId).padStart(2, '0')}.jfif`,
+                                imagePath: `riddle/riddle1/riddle1_${String(qId).padStart(2, '0')}.png`,
                                 explanationPath: `riddle/riddle1/answer_${String(qId).padStart(2, '0')}.jfif`,
                                 points: points,
                                 type: isSelection ? 'choice' : 'text',
@@ -717,11 +697,6 @@
 
                     } catch (e) {
                         console.error("CSV Load Error:", e);
-                        // Fallback or Alert? 
-                        // For demo, create a minimal dummy config if fetch fails (e.g. local file open)
-                        // But since user puts it on server, it should work. 
-                        // If local, we can't do much without a server.
-                        // Display error state
                         setLoading(false);
                     }
                 };
