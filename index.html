@@ -515,33 +515,21 @@
                         }
                         
                         // Correct Answer formatting
-                        // CSV正解が「④ユキ」のような文字列の場合と、単に「ユキ」の場合に対応
-                        // q.correctAnswerListには正解の文字列配列が入っている
-                        // もし正解文字列が「④」で始まっていればそのまま、そうでなければ選択肢から探して整形
-                        const correctStr = q.correctAnswerList[0] || ""; // とりあえず1つ目を表示
-                        // 選択肢番号が含まれているか簡易チェック
+                        const correctStr = q.correctAnswerList[0] || ""; 
                         const hasCircle = /^[\u2460-\u2469]/.test(correctStr);
                         
                         if (hasCircle) {
                             displayCorrectAns = correctStr;
                         } else {
-                            // 選択肢テキストと一致するものを探す
                             const correctIndex = q.options.findIndex(opt => opt === correctStr);
                             if (correctIndex !== -1) {
                                 displayCorrectAns = `${getCircledNumber(correctIndex)}${q.options[correctIndex]}`;
                             } else {
-                                displayCorrectAns = correctStr; // 見つからない場合はそのまま
+                                displayCorrectAns = correctStr; 
                             }
                         }
 
-                        // 判定
-                        // ユーザーの回答(index)に対応するテキストが、正解リストのいずれかと一致するか
                         const userAnsText = userAns !== undefined ? q.options[userAns] : "";
-                        // 正解リストが「④ユキ」形式の場合、「ユキ」部分と比較する必要があるかもしれない
-                        // 逆に、正解リストが「ユキ」で、ユーザー回答がindex 3の場合
-                        
-                        // シンプルに：正解リストの中に「ユーザーが選んだ選択肢のテキスト」が含まれているか
-                        // または、「丸数字+テキスト」が含まれているか
                         const userAnsFull = userAns !== undefined ? `${getCircledNumber(userAns)}${q.options[userAns]}` : "";
                         
                         isCorrect = q.correctAnswerList.some(ans => {
@@ -644,7 +632,7 @@
                              <AsyncImage src={q.imagePath} className="w-full h-full object-cover" />
                         </div>
 
-                        {/* 下段左: しおりと解答 */}
+                        {/* 下段左: しおりと解答 (gapで重なり回避) */}
                         <div className="col-start-1 row-start-2 flex items-end self-end h-full relative w-full overflow-hidden">
                             <div className="flex items-center w-full gap-2">
                                 {isBookmarked && <div className="text-red-600 flex-shrink-0"><i className="fas fa-bookmark text-xl"></i></div>}
@@ -715,7 +703,7 @@
                             
                             tempConfig.push({
                                 id: qId,
-                                imagePath: `riddle/riddle1/riddle1_${String(qId).padStart(2, '0')}.jfif`,
+                                imagePath: `riddle/riddle1/riddle1_${String(qId).padStart(2, '0')}.png`,
                                 explanationPath: `riddle/riddle1/answer_${String(qId).padStart(2, '0')}.jfif`,
                                 points: points,
                                 type: isSelection ? 'choice' : 'text',
