@@ -214,7 +214,6 @@
                 if (!ctx || !canvas) return;
                 const pos = getPos(e);
                 currentStroke.current.push(pos);
-                
                 ctx.save();
                 ctx.setTransform(1, 0, 0, 1, 0, 0);
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -530,8 +529,8 @@
                         isCorrect = q.correctAnswerList.some(ans => ans === userAnsText || ans === userAnsFull);
                     } else {
                         displayUserAns = userAns || "未回答";
-                        // 記述式の正解表示：CSVの2列目のみを表示
-                        displayCorrectAns = q.correctAnswerList[0] || "";
+                        // 記述式の正解表示：CSVの2列目（明示的にパースしたprimaryAnswer）のみを表示
+                        displayCorrectAns = q.primaryAnswer;
                         isCorrect = q.correctAnswerList.includes(userAns);
                     }
 
@@ -677,6 +676,7 @@
                             const cols = lines[lineIdx].split(',');
                             const points = parseInt(cols[0], 10) || 0;
                             const validAnswers = cols.slice(1).filter(a => a && a.trim() !== '');
+                            const primaryAnswer = cols[1] ? cols[1].trim() : ""; // Explicitly get the 2nd column (index 1)
                             
                             const qId = i + 1;
                             const isSelection = !!selectionMap[qId];
@@ -688,7 +688,8 @@
                                 points: points,
                                 type: isSelection ? 'choice' : 'text',
                                 options: selectionMap[qId] || [],
-                                correctAnswerList: validAnswers
+                                correctAnswerList: validAnswers,
+                                primaryAnswer: primaryAnswer // Store for display
                             });
                         }
                         
