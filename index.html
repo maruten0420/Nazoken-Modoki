@@ -5,21 +5,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>謎解き能力検定 2025秋</title>
     
+    <!-- React & ReactDOM -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Babel (JSX Converter) -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome (Icons) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Oswald (DIN alternative for numbers), Noto Sans JP -->
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+    <!-- YakuHanJP -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/yakuhanjp@3.4.1/dist/css/yakuhanjp.min.css">
     
     <style>
-        /* フォント設定 */
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap');
-        @import url('https://cdn.jsdelivr.net/npm/yakuhanjp@3.4.1/dist/css/yakuhanjp.min.css');
-
         body { 
             font-family: YakuHanJP, "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
             user-select: none; 
             touch-action: manipulation; 
+            overflow: hidden; /* Prevent pull-to-refresh on mobile */
+        }
+
+        /* Number Font (DIN-like style) */
+        .font-number {
+            font-family: 'Oswald', sans-serif;
+            letter-spacing: 0.05em;
         }
         
         /* Custom Scrollbar */
@@ -33,7 +44,6 @@
         .cursor-eraser { cursor: cell; } 
     </style>
 </head>
-    
 <body class="bg-gray-100 text-gray-800 h-screen w-screen overflow-hidden">
     <div id="root" class="h-full w-full"></div>
 
@@ -51,13 +61,15 @@
             return isMultipleChoice ? (id % 4) : "サンプル解答";
         });
 
-        // Question Config (Path updated to riddle/riddle1/...)
+        // Question Config
+        // 画像の拡張子が .jfif なのか .png なのか確認してください。ここでは .png に設定しています。
         const QUESTION_CONFIG = Array.from({ length: TOTAL_QUESTIONS }, (_, i) => {
             const id = i + 1;
             const isMultipleChoice = [11, 12, 13, 50].includes(id); 
             return {
                 id: id,
-                imagePath: `riddle/riddle1/riddle1_${String(id).padStart(2, '0')}.jfif`,
+                // GitHubのフォルダ構成に合わせてパスを指定
+                imagePath: `riddle/riddle1/riddle1_${String(id).padStart(2, '0')}.png`,
                 points: 2,
                 type: isMultipleChoice ? 'choice' : 'text',
                 options: isMultipleChoice ? ['イモ', 'チゲ', 'ツル', 'ユキ'] : [],
@@ -90,7 +102,7 @@
                     <div className="max-w-4xl w-full bg-white p-8 space-y-8">
                         <div className="border-b-2 border-red-600 pb-4 mb-8 flex justify-between items-end">
                             <h1 className="text-3xl font-bold text-red-600">謎解き能力検定 2025秋</h1>
-                            <div className="text-sm text-gray-500">ハンドルネーム: {handleName || "未入力"}</div>
+                            <div className="text-sm text-gray-500">受検番号: {handleName || "未入力"}</div>
                         </div>
                         <div className="space-y-6">
                             <div className="bg-gray-50 p-6 rounded border border-gray-200">
@@ -100,9 +112,9 @@
                             <div className="bg-gray-50 p-6 rounded border border-gray-200">
                                 <label className="block text-gray-700 font-bold mb-4">問題セット選択</label>
                                 <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                                    <button className="bg-red-50 border-2 border-red-500 text-red-700 font-bold py-3 px-4 rounded shadow-sm">riddle1</button>
+                                    <button className="bg-red-50 border-2 border-red-500 text-red-700 font-bold py-3 px-4 rounded shadow-sm font-number">riddle1</button>
                                     {[2,3,4,5,6,7,8,9,10].map(num => (
-                                        <button key={num} disabled className="bg-gray-200 text-gray-400 font-bold py-3 px-4 rounded cursor-not-allowed">riddle{num}</button>
+                                        <button key={num} disabled className="bg-gray-200 text-gray-400 font-bold py-3 px-4 rounded cursor-not-allowed font-number">riddle{num}</button>
                                     ))}
                                 </div>
                             </div>
@@ -216,6 +228,7 @@
                 return () => window.removeEventListener('keydown', handleKeyDown);
             }, [currentQIndex]);
 
+            // --- Enhanced Canvas Layer (Using Pointer Events for better pen support) ---
             const CanvasLayer = () => {
                 const canvasRef = useRef(null);
                 const [isDrawing, setIsDrawing] = useState(false);
@@ -275,14 +288,22 @@
 
                 const getPos = (e) => {
                     const rect = canvasRef.current.getBoundingClientRect();
-                    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-                    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-                    return { x: clientX - rect.left, y: clientY - rect.top };
+                    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
                 };
-                const startDraw = (e) => { setIsDrawing(true); setCurrentStroke([getPos(e)]); };
-                const moveDraw = (e) => { if (!isDrawing) return; setCurrentStroke(prev => [...prev, getPos(e)]); };
-                const endDraw = () => {
+
+                // Use Pointer Events for better touch/pen support
+                const startDraw = (e) => {
+                    e.currentTarget.setPointerCapture(e.pointerId); // Capture the pointer
+                    setIsDrawing(true);
+                    setCurrentStroke([getPos(e)]);
+                };
+                const moveDraw = (e) => {
                     if (!isDrawing) return;
+                    setCurrentStroke(prev => [...prev, getPos(e)]);
+                };
+                const endDraw = (e) => {
+                    if (!isDrawing) return;
+                    e.currentTarget.releasePointerCapture(e.pointerId);
                     setIsDrawing(false);
                     if (currentStroke.length > 0) {
                         const newStroke = { tool, color, points: currentStroke };
@@ -296,8 +317,16 @@
                 };
 
                 return (
-                    <div ref={containerRef} className={`absolute inset-0 w-full h-full z-10 touch-none pointer-events-auto ${!isToolbarVisible ? 'pointer-events-none' : ''}`}>
-                        <canvas ref={canvasRef} onMouseDown={startDraw} onMouseMove={moveDraw} onMouseUp={endDraw} onMouseLeave={endDraw} onTouchStart={startDraw} onTouchMove={moveDraw} onTouchEnd={endDraw} className={`w-full h-full ${tool === 'eraser' ? 'cursor-eraser' : 'cursor-pen'}`} />
+                    // touch-action: none is critical for drawing on mobile
+                    <div ref={containerRef} className={`absolute inset-0 w-full h-full z-10 ${!isToolbarVisible ? 'pointer-events-none' : ''}`} style={{ touchAction: 'none' }}>
+                        <canvas 
+                            ref={canvasRef} 
+                            onPointerDown={startDraw}
+                            onPointerMove={moveDraw}
+                            onPointerUp={endDraw}
+                            onPointerLeave={endDraw}
+                            className={`w-full h-full ${tool === 'eraser' ? 'cursor-eraser' : 'cursor-pen'}`} 
+                        />
                     </div>
                 );
             };
@@ -323,6 +352,11 @@
             };
             const clearAll = () => confirmAction('書き込んだ線をすべて消しますか？', () => { setDrawings(prev => ({ ...prev, [currentQ.id]: [] })); setRedoStack(prev => { const next = {...prev}; delete next[currentQ.id]; return next; }); });
 
+            const handleImageError = (e) => {
+                e.target.style.display = 'none';
+                if(e.target.nextSibling) e.target.nextSibling.style.display = 'flex';
+            };
+
             return (
                 <div className="flex flex-col h-full bg-gray-200 font-sans">
                     <ConfirmationModal isOpen={modalConfig.isOpen} message={modalConfig.message} onConfirm={modalConfig.onConfirm} onCancel={() => setModalConfig(prev => ({ ...prev, isOpen: false }))} />
@@ -335,7 +369,7 @@
                         </div>
                         <div className="flex items-end">
                             <span className="text-sm text-gray-600 mr-1 mb-1">残り</span>
-                            <span className="text-3xl font-mono text-gray-800 leading-none">{formatTime(timeLeft)}</span>
+                            <span className="text-3xl font-mono text-gray-800 leading-none font-number">{formatTime(timeLeft)}</span>
                         </div>
                     </div>
 
@@ -343,10 +377,10 @@
                         <div className="flex-1 flex flex-col relative z-0 h-full overflow-hidden">
                             <div className="flex-1 bg-gray-100 flex items-center justify-center p-2 md:p-4 overflow-hidden relative">
                                 <div className="w-full h-full max-w-5xl relative flex items-center justify-center">
-                                    {currentQIndex > 0 && <button onClick={() => navigate('prev')} className="absolute left-0 top-1/2 -translate-y-1/2 z-30 bg-white/50 hover:bg-white rounded-full p-2 text-gray-600 shadow-lg transform -translate-x-1/2 md:translate-x-0"><i className="fas fa-chevron-left text-2xl"></i><div className="text-xs text-center">{String(currentQIndex).padStart(2,'0')}</div></button>}
-                                    {currentQIndex < TOTAL_QUESTIONS - 1 && <button onClick={() => navigate('next')} className="absolute right-0 top-1/2 -translate-y-1/2 z-30 bg-white/50 hover:bg-white rounded-full p-2 text-gray-600 shadow-lg transform translate-x-1/2 md:translate-x-0"><i className="fas fa-chevron-right text-2xl"></i><div className="text-xs text-center">{String(currentQIndex + 2).padStart(2,'0')}</div></button>}
+                                    {currentQIndex > 0 && <button onClick={() => navigate('prev')} className="absolute left-0 top-1/2 -translate-y-1/2 z-30 bg-white/50 hover:bg-white rounded-full p-2 text-gray-600 shadow-lg transform -translate-x-1/2 md:translate-x-0"><i className="fas fa-chevron-left text-2xl"></i><div className="text-xs text-center font-number">{String(currentQIndex).padStart(2,'0')}</div></button>}
+                                    {currentQIndex < TOTAL_QUESTIONS - 1 && <button onClick={() => navigate('next')} className="absolute right-0 top-1/2 -translate-y-1/2 z-30 bg-white/50 hover:bg-white rounded-full p-2 text-gray-600 shadow-lg transform translate-x-1/2 md:translate-x-0"><i className="fas fa-chevron-right text-2xl"></i><div className="text-xs text-center font-number">{String(currentQIndex + 2).padStart(2,'0')}</div></button>}
                                     <div className="relative w-full h-full select-none flex items-center justify-center">
-                                        <img src={currentQ.imagePath} alt={`Problem ${currentQ.id}`} className="max-w-full max-h-full object-contain pointer-events-none" onError={(e) => { e.target.style.display = 'none'; if(e.target.nextSibling) e.target.nextSibling.style.display = 'flex'; }} />
+                                        <img src={currentQ.imagePath} alt={`Problem ${currentQ.id}`} className="max-w-full max-h-full object-contain pointer-events-none" onError={handleImageError} />
                                         <div className="hidden absolute inset-0 w-full h-full bg-gray-50 flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-300">
                                             <i className="fas fa-image text-4xl mb-2"></i>
                                             <span className="text-xl font-bold text-gray-500">問題 {currentQ.id}</span>
@@ -464,7 +498,7 @@
                 <div className="flex flex-col h-full bg-white font-sans overflow-hidden">
                      <div className="border-b-2 border-red-600 p-4 flex justify-between items-center bg-white shrink-0">
                         <h1 className="text-2xl font-bold text-red-600">受検結果</h1>
-                        <div className="text-xl font-bold">合計得点: <span className="text-3xl text-red-600">{results.totalScore}</span> / 100点</div>
+                        <div className="text-xl font-bold">合計得点: <span className="text-3xl text-red-600 font-number">{results.totalScore}</span> / 100点</div>
                     </div>
                     <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-gray-50">
                         <div className="max-w-4xl mx-auto bg-white shadow rounded-lg overflow-hidden">
@@ -480,7 +514,7 @@
                                 <tbody>
                                     {results.grading.map((row) => (
                                         <tr key={row.id} className="border-b border-gray-200 hover:bg-gray-50">
-                                            <td className="p-3 text-center font-bold text-gray-700">{row.id}</td>
+                                            <td className="p-3 text-center font-bold text-gray-700 font-number">{row.id}</td>
                                             <td className="p-3 text-green-700 font-medium">{row.correctAns}</td>
                                             <td className="p-3 text-gray-800">{row.userAns}</td>
                                             <td className="p-3 text-center">
@@ -514,13 +548,19 @@
                     <div className="flex-1 p-2 flex flex-col justify-between relative overflow-hidden">
                         <div className="flex justify-between items-start pl-4 relative">
                             <div className="flex flex-col">
-                                <span className={`text-2xl font-bold leading-none ${isActive ? 'text-red-600' : 'text-gray-400'}`}>{String(q.id).padStart(2, '0')}</span>
+                                <span className={`text-2xl font-bold leading-none font-number ${isActive ? 'text-red-600' : 'text-gray-400'}`}>{String(q.id).padStart(2, '0')}</span>
                             </div>
                             <span className="text-xs text-gray-400">{q.points}点</span>
                         </div>
                         {isBookmarked && <div className="absolute top-8 left-5 text-red-600"><i className="fas fa-bookmark text-2xl"></i></div>}
                         <div className="flex justify-end items-end h-full">
-                            {isAnswered ? <span className="text-sm font-bold text-gray-500 truncate max-w-[120px]">{answerText}</span> : <div className="w-8 h-8 bg-gray-100 border text-[8px] flex items-center justify-center text-gray-400">img</div>}
+                            {isAnswered ? 
+                                <span className="text-sm font-bold text-gray-500 truncate max-w-[120px]">{answerText}</span> 
+                                : 
+                                <div className="w-8 h-8 bg-gray-100 border flex items-center justify-center overflow-hidden">
+                                    <img src={q.imagePath} alt="" className="w-full h-full object-cover opacity-50" />
+                                </div>
+                            }
                         </div>
                     </div>
                 </button>
