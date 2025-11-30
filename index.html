@@ -8,22 +8,22 @@
     <!-- React & ReactDOM -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <!-- Babel (JSX Converter) -->
+    <!-- Babel -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome (Icons) -->
+    <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts -->
+    
+    <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
-    <!-- YakuHanJP -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/yakuhanjp@3.4.1/dist/css/yakuhanjp.min.css">
     
     <style>
         body { 
             font-family: YakuHanJP, "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
             user-select: none; 
-            touch-action: none; 
+            touch-action: none; /* 全画面でスクロール禁止（誤操作防止） */
             overflow: hidden; 
         }
 
@@ -32,6 +32,7 @@
             letter-spacing: 0.05em;
         }
         
+        /* サイドバーのスクロールバー */
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
@@ -51,7 +52,7 @@
 </head>
 <body class="text-gray-800 h-screen w-screen overflow-hidden relative">
     
-    <!-- Fixed Background Layer -->
+    <!-- 背景画像 -->
     <div style="position: absolute; inset: 0; z-index: -1; background-image: url('deco/back.png'); background-repeat: no-repeat; background-position: center; background-size: contain; opacity: 0.5;"></div>
 
     <div id="root" class="h-full w-full"></div>
@@ -59,11 +60,10 @@
     <script type="text/babel">
         const { useState, useEffect, useRef, useMemo, forwardRef, useCallback } = React;
 
-        // --- Constants ---
+        // --- 設定 ---
         const TIME_LIMIT_MINUTES = 60;
         const CSV_PATH = 'riddle/riddle1/riddle1.csv';
 
-        // --- Helper: Circled Numbers ---
         const getCircledNumber = (index) => {
             const circled = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩'];
             return circled[index] || `(${index + 1})`;
@@ -74,7 +74,7 @@
         const ConfirmationModal = ({ isOpen, message, onConfirm, onCancel }) => {
             if (!isOpen) return null;
             return (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" style={{ touchAction: 'none' }}>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
                     <div className="bg-white rounded-lg shadow-xl p-6 max-w-sm w-full border-2 border-red-600 animate-fade-in">
                         <h3 className="text-lg font-bold mb-4 text-gray-800">確認</h3>
                         <p className="text-gray-600 mb-6">{message}</p>
@@ -100,12 +100,162 @@
                 img.onerror = () => { setLoading(false); setError(true); };
             }, [src]);
 
-            if (error) return fallback || <div className="flex flex-col items-center text-gray-400 p-2 justify-center h-full"><i className="fas fa-image text-2xl mb-1"></i><span className="text-[10px] mt-1">No Image</span></div>;
+            if (error) return fallback || <div className="flex flex-col items-center text-gray-400 p-2 justify-center h-full bg-gray-50"><i className="fas fa-image text-xl mb-1"></i><span className="text-[10px]">No Image</span></div>;
 
             return (
-                <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
-                    {loading && <div className="absolute inset-0 flex items-center justify-center bg-gray-50 text-gray-400 font-bold text-xs z-0 font-number">Loading...</div>}
+                <div className="relative w-full h-full flex items-center justify-center overflow-hidden bg-white">
+                    {loading && <div className="absolute inset-0 flex items-center justify-center bg-gray-50 text-gray-400 font-bold text-[10px] font-number">Loading...</div>}
                     <img src={src} alt={alt} className={`${className} ${loading ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`} />
+                </div>
+            );
+        };
+
+        // --- 高速描画対応 Canvas Layer ---
+        const CanvasLayer = ({ drawings, onDrawEnd, tool, color, isVisible }) => {
+            const canvasRef = useRef(null);
+            const isDrawing = useRef(false);
+            const currentStroke = useRef([]);
+            const ctxRef = useRef(null);
+
+            // 初期化とリサイズ
+            useEffect(() => {
+                const canvas = canvasRef.current;
+                if (!canvas) return;
+
+                const updateSize = () => {
+                    const parent = canvas.parentElement;
+                    if(parent) {
+                        const dpr = window.devicePixelRatio || 1;
+                        canvas.width = parent.clientWidth * dpr;
+                        canvas.height = parent.clientHeight * dpr;
+                        canvas.style.width = `${parent.clientWidth}px`;
+                        canvas.style.height = `${parent.clientHeight}px`;
+                        
+                        const ctx = canvas.getContext('2d');
+                        ctx.scale(dpr, dpr);
+                        ctx.lineCap = 'round';
+                        ctx.lineJoin = 'round';
+                        ctxRef.current = ctx;
+                        
+                        redrawAll(); // サイズ変更時に再描画
+                    }
+                };
+                
+                updateSize();
+                window.addEventListener('resize', updateSize);
+                return () => window.removeEventListener('resize', updateSize);
+            }, [drawings]); // drawingsが変わったとき（undo/redo）も再描画
+
+            const redrawAll = () => {
+                const ctx = ctxRef.current;
+                const canvas = canvasRef.current;
+                if (!ctx || !canvas) return;
+
+                // クリア
+                ctx.save();
+                ctx.setTransform(1, 0, 0, 1, 0, 0);
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.restore();
+
+                if (!isVisible) return;
+
+                // 過去のストロークを描画
+                drawings.forEach(stroke => drawStroke(ctx, stroke));
+            };
+
+            const drawStroke = (ctx, stroke) => {
+                if (stroke.points.length < 1) return;
+                
+                ctx.beginPath();
+                if (stroke.tool === 'eraser') {
+                    ctx.globalCompositeOperation = 'destination-out';
+                    ctx.lineWidth = 20;
+                } else {
+                    ctx.globalCompositeOperation = 'source-over';
+                    ctx.lineWidth = 3;
+                    ctx.strokeStyle = stroke.color === 'black' ? '#000' : stroke.color === 'red' ? '#ff0000' : '#0000ff';
+                }
+
+                if (stroke.tool === 'line' && stroke.points.length > 1) {
+                    const start = stroke.points[0];
+                    const end = stroke.points[stroke.points.length - 1];
+                    ctx.moveTo(start.x, start.y);
+                    ctx.lineTo(end.x, end.y);
+                } else {
+                    ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
+                    for (let i = 1; i < stroke.points.length; i++) {
+                        ctx.lineTo(stroke.points[i].x, stroke.points[i].y);
+                    }
+                }
+                ctx.stroke();
+                ctx.globalCompositeOperation = 'source-over';
+            };
+
+            // リアルタイム描画（Reactの状態を介さず直接Canvasを操作）
+            const drawLive = (e) => {
+                const ctx = ctxRef.current;
+                const canvas = canvasRef.current;
+                if (!ctx || !canvas) return;
+
+                const pos = getPos(e);
+                currentStroke.current.push(pos);
+
+                // 毎回全消去して再描画（消しゴムや直線のプレビューのため）
+                // ※パフォーマンスが厳しい場合は最適化が必要だが、通常の線画ならこれで十分スムーズ
+                ctx.save();
+                ctx.setTransform(1, 0, 0, 1, 0, 0);
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.restore();
+
+                drawings.forEach(s => drawStroke(ctx, s));
+                drawStroke(ctx, { tool, color, points: currentStroke.current });
+            };
+
+            const getPos = (e) => {
+                const rect = canvasRef.current.getBoundingClientRect();
+                return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+            };
+
+            const handlePointerDown = (e) => {
+                if (!isVisible) return;
+                e.currentTarget.setPointerCapture(e.pointerId); // ポインターをキャプチャして外れても追跡
+                isDrawing.current = true;
+                currentStroke.current = [getPos(e)];
+                
+                // 点だけの描画に対応
+                drawLive(e);
+            };
+
+            const handlePointerMove = (e) => {
+                if (!isDrawing.current || !isVisible) return;
+                drawLive(e);
+            };
+
+            const handlePointerUp = (e) => {
+                if (!isDrawing.current) return;
+                e.currentTarget.releasePointerCapture(e.pointerId);
+                isDrawing.current = false;
+                
+                if (currentStroke.current.length > 0) {
+                    // 描き終わったタイミングでReactの状態を更新
+                    onDrawEnd({ tool, color, points: [...currentStroke.current] });
+                }
+                currentStroke.current = [];
+            };
+
+            // Props変更時の再描画
+            useEffect(() => { redrawAll(); }, [drawings, isVisible, tool, color]);
+
+            return (
+                <div className={`absolute inset-0 w-full h-full z-10 ${!isVisible ? 'pointer-events-none' : ''}`} style={{ touchAction: 'none' }}>
+                    <canvas 
+                        ref={canvasRef} 
+                        onPointerDown={handlePointerDown}
+                        onPointerMove={handlePointerMove}
+                        onPointerUp={handlePointerUp}
+                        onPointerLeave={handlePointerUp}
+                        className={`w-full h-full touch-none ${tool === 'eraser' ? 'cursor-eraser' : 'cursor-pen'}`} 
+                    />
                 </div>
             );
         };
@@ -140,132 +290,6 @@
                             <button onClick={() => handleName && onStart(handleName)} disabled={!handleName} className={`text-white font-bold text-xl py-4 px-12 rounded shadow-lg transition-all ${handleName ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-400 cursor-not-allowed'}`}>模試を受ける</button>
                         </div>
                     </div>
-                </div>
-            );
-        };
-
-        const CanvasLayer = ({ drawings, onDrawEnd, tool, color, isVisible }) => {
-            const canvasRef = useRef(null);
-            const isDrawing = useRef(false);
-            const currentStroke = useRef([]);
-            const ctxRef = useRef(null);
-
-            useEffect(() => {
-                const canvas = canvasRef.current;
-                if (!canvas) return;
-                const updateSize = () => {
-                    const parent = canvas.parentElement;
-                    if(parent) {
-                        const dpr = window.devicePixelRatio || 1;
-                        canvas.width = parent.clientWidth * dpr;
-                        canvas.height = parent.clientHeight * dpr;
-                        canvas.style.width = `${parent.clientWidth}px`;
-                        canvas.style.height = `${parent.clientHeight}px`;
-                        const ctx = canvas.getContext('2d');
-                        ctx.scale(dpr, dpr);
-                        ctx.lineCap = 'round';
-                        ctx.lineJoin = 'round';
-                        ctxRef.current = ctx;
-                        redrawAll();
-                    }
-                };
-                updateSize();
-                window.addEventListener('resize', updateSize);
-                return () => window.removeEventListener('resize', updateSize);
-            }, [drawings]);
-
-            const redrawAll = () => {
-                const canvas = canvasRef.current;
-                const ctx = ctxRef.current;
-                if (!canvas || !ctx) return;
-                ctx.save();
-                ctx.setTransform(1, 0, 0, 1, 0, 0);
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.restore();
-                if (!isVisible) return;
-                drawings.forEach(stroke => drawStroke(ctx, stroke));
-            };
-
-            const drawStroke = (ctx, stroke) => {
-                if (stroke.points.length < 1) return;
-                ctx.beginPath();
-                if (stroke.tool === 'eraser') {
-                    ctx.globalCompositeOperation = 'destination-out';
-                    ctx.lineWidth = 20;
-                } else {
-                    ctx.globalCompositeOperation = 'source-over';
-                    ctx.lineWidth = 3;
-                    ctx.strokeStyle = stroke.color === 'black' ? '#000' : stroke.color === 'red' ? '#ff0000' : '#0000ff';
-                }
-                if (stroke.tool === 'line' && stroke.points.length > 1) {
-                    const start = stroke.points[0];
-                    const end = stroke.points[stroke.points.length - 1];
-                    ctx.moveTo(start.x, start.y);
-                    ctx.lineTo(end.x, end.y);
-                } else {
-                    ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
-                    for (let i = 1; i < stroke.points.length; i++) {
-                        ctx.lineTo(stroke.points[i].x, stroke.points[i].y);
-                    }
-                }
-                ctx.stroke();
-                ctx.globalCompositeOperation = 'source-over';
-            };
-
-            const drawLive = (e) => {
-                const ctx = ctxRef.current;
-                const canvas = canvasRef.current;
-                if (!ctx || !canvas) return;
-                const pos = getPos(e);
-                currentStroke.current.push(pos);
-                
-                ctx.save();
-                ctx.setTransform(1, 0, 0, 1, 0, 0);
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.restore();
-                drawings.forEach(s => drawStroke(ctx, s));
-                drawStroke(ctx, { tool, color, points: currentStroke.current });
-            };
-
-            const getPos = (e) => {
-                const rect = canvasRef.current.getBoundingClientRect();
-                return { x: e.clientX - rect.left, y: e.clientY - rect.top };
-            };
-
-            const handlePointerDown = (e) => {
-                if (!isVisible) return;
-                e.currentTarget.setPointerCapture(e.pointerId);
-                isDrawing.current = true;
-                currentStroke.current = [getPos(e)];
-                const ctx = ctxRef.current;
-                if(ctx) {
-                    ctx.beginPath();
-                    ctx.moveTo(currentStroke.current[0].x, currentStroke.current[0].y);
-                    ctx.lineTo(currentStroke.current[0].x, currentStroke.current[0].y);
-                    ctx.stroke();
-                }
-            };
-
-            const handlePointerMove = (e) => {
-                if (!isDrawing.current || !isVisible) return;
-                drawLive(e);
-            };
-
-            const handlePointerUp = (e) => {
-                if (!isDrawing.current) return;
-                e.currentTarget.releasePointerCapture(e.pointerId);
-                isDrawing.current = false;
-                if (currentStroke.current.length > 0) {
-                    onDrawEnd({ tool, color, points: [...currentStroke.current] });
-                }
-                currentStroke.current = [];
-            };
-
-            useEffect(() => { redrawAll(); }, [drawings, isVisible, tool, color]);
-
-            return (
-                <div className={`absolute inset-0 w-full h-full z-10 ${!isVisible ? 'pointer-events-none' : ''}`} style={{ touchAction: 'none' }}>
-                    <canvas ref={canvasRef} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerLeave={handlePointerUp} className={`w-full h-full touch-none ${tool === 'eraser' ? 'cursor-eraser' : 'cursor-pen'}`} />
                 </div>
             );
         };
@@ -413,11 +437,11 @@
                     </div>
                     <div className="flex flex-1 overflow-hidden relative">
                         <div className="flex-1 flex flex-col relative z-0 h-full overflow-hidden">
-                            <div className="flex-1 flex items-center justify-center p-2 md:p-4 overflow-hidden relative"> {/* Transparent bg */}
+                            <div className="flex-1 flex items-center justify-center p-2 md:p-4 overflow-hidden relative">
                                 <div className="w-full h-full max-w-5xl relative flex items-center justify-center">
                                     {currentQIndex > 0 && <button onClick={() => navigate('prev')} className="absolute left-0 top-1/2 -translate-y-1/2 z-30 bg-white/50 hover:bg-white rounded-full p-2 text-gray-600 shadow-lg transform -translate-x-1/2 md:translate-x-0 w-16 h-16 flex items-center justify-center"><i className="fas fa-chevron-left text-3xl"></i><div className="absolute -bottom-4 text-xs text-center font-number bg-white/80 px-1 rounded">{String(currentQIndex).padStart(2,'0')}</div></button>}
                                     {currentQIndex < config.length - 1 && <button onClick={() => navigate('next')} className="absolute right-0 top-1/2 -translate-y-1/2 z-30 bg-white/50 hover:bg-white rounded-full p-2 text-gray-600 shadow-lg transform translate-x-1/2 md:translate-x-0 w-16 h-16 flex items-center justify-center"><i className="fas fa-chevron-right text-3xl"></i><div className="absolute -bottom-4 text-xs text-center font-number bg-white/80 px-1 rounded">{String(currentQIndex + 2).padStart(2,'0')}</div></button>}
-                                    <div className="relative w-full h-full select-none flex items-center justify-center bg-white shadow-lg"> {/* Added bg-white to question area */}
+                                    <div className="relative w-full h-full select-none flex items-center justify-center bg-white shadow-lg">
                                         <AsyncImage src={currentQ.imagePath} alt={`Problem ${currentQ.id}`} className="max-w-full max-h-full object-contain pointer-events-none" fallback={<div className="absolute inset-0 w-full h-full bg-gray-50 flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-300 flex"><i className="fas fa-image text-4xl mb-2"></i><span className="text-xl font-bold text-gray-500">問題 {currentQ.id}</span><span className="text-xs mt-2">画像を配置してください: {currentQ.imagePath}</span></div>} />
                                         <div className="absolute inset-0 w-full h-full"><CanvasLayer drawings={drawings[currentQ.id] || []} onDrawEnd={handleDrawEnd} tool={tool} color={color} isVisible={isToolbarVisible} /></div>
                                     </div>
@@ -517,7 +541,6 @@
                             displayUserAns = "未回答";
                         }
                         const correctStr = q.primaryAnswer || ""; 
-                        
                         const hasCircle = /^[\u2460-\u2469]/.test(correctStr);
                         if (hasCircle) {
                             displayCorrectAns = correctStr;
@@ -534,7 +557,6 @@
                         isCorrect = q.correctAnswerList.some(ans => ans === userAnsText || ans === userAnsFull);
                     } else {
                         displayUserAns = userAns || "未回答";
-                        // Display ONLY the primary answer (2nd column in CSV)
                         displayCorrectAns = q.primaryAnswer || "";
                         isCorrect = q.correctAnswerList.includes(userAns);
                     }
