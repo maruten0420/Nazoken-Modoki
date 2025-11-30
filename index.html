@@ -52,7 +52,7 @@
 <body class="text-gray-800 h-screen w-screen overflow-hidden relative">
     
     <!-- Fixed Background Layer -->
-    <div style="position: absolute; inset: 0; z-index: -1; background-image: url('deco/back.png'); background-repeat: repeat; background-position: center; opacity: 0.5;"></div>
+    <div style="position: absolute; inset: 0; z-index: -1; background-image: url('deco/back.png'); background-repeat: no-repeat; background-position: center; background-size: contain; opacity: 0.5;"></div>
 
     <div id="root" class="h-full w-full"></div>
 
@@ -516,7 +516,7 @@
                         } else {
                             displayUserAns = "未回答";
                         }
-                        const correctStr = q.primaryAnswer || ""; // Using explicit primary answer from CSV column 2
+                        const correctStr = q.primaryAnswer || ""; 
                         
                         const hasCircle = /^[\u2460-\u2469]/.test(correctStr);
                         if (hasCircle) {
@@ -727,8 +727,9 @@
                     {/* Fixed Background Layer */}
                     <div className="absolute inset-0 z-[-1]" style={{
                         backgroundImage: "url('deco/back.png')",
-                        backgroundRepeat: 'repeat',
+                        backgroundRepeat: 'no-repeat',
                         backgroundPosition: 'center',
+                        backgroundSize: 'contain',
                         opacity: 0.5,
                     }}></div>
 
