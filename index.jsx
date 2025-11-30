@@ -84,8 +84,8 @@ const StartScreen = ({ onStart }) => {
             <div className="max-w-4xl w-full bg-white p-8 space-y-8">
                 {/* Header Title */}
                 <div className="border-b-2 border-red-600 pb-4 mb-8 flex justify-between items-end">
-                    <h1 className="text-3xl font-bold text-red-600">謎解き能力検定 2025秋</h1>
-                    <div className="text-sm text-gray-500">受検番号: {handleName || "未入力"}</div>
+                    <h1 className="text-3xl font-bold text-red-600">謎検もどき</h1>
+                    <div className="text-sm text-gray-500">ハンドルネーム: {handleName || "未入力"}</div>
                 </div>
 
                 <div className="space-y-6">
