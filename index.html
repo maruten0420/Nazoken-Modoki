@@ -178,103 +178,112 @@
             );
         };
 
-        const StartScreen = ({ onStart, initialName }) => {
-            const [handleName, setHandleName] = useState(initialName || "");
-            const [selectedRiddle, setSelectedRiddle] = useState(1);
-            const [riddleInfo, setRiddleInfo] = useState({ creator: '...', count: '...', limit: '...' });
+        // 検索ワード: const StartScreen = 
+// 以下のコンポーネント全体を差し替えてください
 
-            // 選択された問題セットの情報をCSVから取得する
-            useEffect(() => {
-                const fetchRiddleInfo = async () => {
-                    setRiddleInfo({ creator: '読み込み中...', count: '...', limit: '...' });
-                    try {
-                        const csvPath = `riddle/riddle${selectedRiddle}/riddle${selectedRiddle}.csv`;
-                        const response = await fetch(csvPath);
-                        if (!response.ok) throw new Error('Not found');
-                        const buffer = await response.arrayBuffer();
-                        const decoder = new TextDecoder('utf-8');
-                        const text = decoder.decode(buffer);
-                        const firstLine = text.split(/\r\n|\n/)[0];
-                        if (!firstLine) throw new Error('Empty');
-                        
-                        // 1行目: 問題数, 選択肢数, 制限時間, 制作者
-                        const [count, , limit, creator] = firstLine.split(',');
-                        
-                        setRiddleInfo({
-                            count: count ? `${count}問` : '不明',
-                            limit: limit ? `${limit}分` : '不明',
-                            creator: creator ? creator.trim() : '不明'
-                        });
-                    } catch (e) {
-                        setRiddleInfo({ creator: '不明', count: '不明', limit: '不明' });
-                    }
-                };
-                fetchRiddleInfo();
-            }, [selectedRiddle]);
+const StartScreen = ({ onStart, initialName }) => {
+    const [handleName, setHandleName] = useState(initialName || "");
+    const [selectedRiddle, setSelectedRiddle] = useState(1);
+    const [riddleInfo, setRiddleInfo] = useState({ creator: '...', count: '...', limit: '...' });
 
-            return (
-                <div className="flex flex-col items-center justify-center h-full p-4 overflow-y-auto relative z-20">
-                    <div className="max-w-4xl w-full bg-white p-6 md:p-8 space-y-6 md:space-y-8 shadow-xl rounded-lg">
-                        <div className="border-b-2 border-red-600 pb-4 mb-4 md:mb-8 flex justify-between items-end">
-                            <div className="h-10 md:h-12">
-                                <img src="deco/logo.png" alt="ロゴ" className="h-full object-contain" onError={(e) => e.target.style.display = 'none'} />
-                            </div>
-                            <div className="text-xs md:text-sm text-gray-500">ユーザーネーム: {handleName || "未入力"}</div>
+    // 選択された問題セットの情報をCSVから取得する
+    useEffect(() => {
+        const fetchRiddleInfo = async () => {
+            setRiddleInfo({ creator: '読み込み中...', count: '...', limit: '...' });
+            try {
+                const csvPath = `riddle/riddle${selectedRiddle}/riddle${selectedRiddle}.csv`;
+                const response = await fetch(csvPath);
+                if (!response.ok) throw new Error('Not found');
+                const buffer = await response.arrayBuffer();
+                const decoder = new TextDecoder('utf-8');
+                const text = decoder.decode(buffer);
+                const firstLine = text.split(/\r\n|\n/)[0];
+                if (!firstLine) throw new Error('Empty');
+                
+                // 1行目: 問題数, 選択肢数, 制限時間, 制作者
+                const [count, , limit, creator] = firstLine.split(',');
+                
+                setRiddleInfo({
+                    count: count ? `${count}問` : '不明',
+                    limit: limit ? `${limit}分` : '不明',
+                    creator: creator ? creator.trim() : '不明'
+                });
+            } catch (e) {
+                setRiddleInfo({ creator: '不明', count: '不明', limit: '不明' });
+            }
+        };
+        fetchRiddleInfo();
+    }, [selectedRiddle]);
+
+    return (
+        /* 【修正箇所1】 外側のdiv: スクロール機能のみを担当 */
+        <div className="h-full overflow-y-auto relative z-20 custom-scrollbar">
+            
+            {/* 【修正箇所2】 内側のdiv: レイアウトと高さを担当 (min-h-full が重要) */}
+            <div className="flex flex-col items-center justify-center min-h-full p-4">
+                
+                {/* コンテンツ部分 (変更なし) */}
+                <div className="max-w-4xl w-full bg-white p-6 md:p-8 space-y-6 md:space-y-8 shadow-xl rounded-lg my-auto">
+                    <div className="border-b-2 border-red-600 pb-4 mb-4 md:mb-8 flex justify-between items-end">
+                        <div className="h-10 md:h-12">
+                            <img src="deco/logo.png" alt="ロゴ" className="h-full object-contain" onError={(e) => e.target.style.display = 'none'} />
                         </div>
-                        <div className="space-y-4 md:space-y-6">
-                            <div className="bg-gray-50 p-4 md:p-6 rounded border border-gray-200">
-                                <label className="block text-gray-700 font-bold mb-2 text-sm md:text-base">ハンドルネーム</label>
-                                <input type="text" className="w-full border-2 border-gray-300 p-2 md:p-3 rounded focus:outline-none focus:border-red-500 text-base md:text-lg" placeholder="ここに入力してください" value={handleName} onChange={(e) => setHandleName(e.target.value)} />
-                            </div>
-                            <div className="bg-gray-50 p-4 md:p-6 rounded border border-gray-200">
-                                <label className="block text-gray-700 font-bold mb-4 text-sm md:text-base">問題セット選択</label>
-                                <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4 mb-4">
-                                    <button 
-                                        onClick={() => setSelectedRiddle(1)}
-                                        className={`border-2 font-bold py-2 md:py-3 px-2 md:px-4 rounded shadow-sm font-number transition-colors text-sm md:text-base ${selectedRiddle === 1 ? 'bg-red-600 border-red-600 text-white' : 'bg-red-50 border-red-500 text-red-700'}`}
-                                    >
-                                        riddle1
-                                    </button>
-                                    
-                                    <button 
-                                        onClick={() => setSelectedRiddle(2)}
-                                        className={`border-2 font-bold py-2 md:py-3 px-2 md:px-4 rounded shadow-sm font-number transition-colors text-sm md:text-base ${selectedRiddle === 2 ? 'bg-red-600 border-red-600 text-white' : 'bg-red-50 border-red-500 text-red-700'}`}
-                                    >
-                                        riddle2
-                                    </button>
-
-                                    {[3,4,5,6,7,8,9,10].map(num => (
-                                        <button key={num} disabled className="bg-gray-200 text-gray-400 font-bold py-2 md:py-3 px-2 md:px-4 rounded cursor-not-allowed font-number text-sm md:text-base">riddle{num}</button>
-                                    ))}
-                                </div>
-                                {/* 制作者情報表示エリア */}
-                                <div className="text-sm md:text-base text-gray-700 bg-white p-3 rounded border border-gray-300 flex flex-wrap gap-4 items-center">
-                                    <div className="flex items-center"><i className="fas fa-user-edit text-gray-400 mr-2"></i><span className="font-bold mr-1">制作者:</span> {riddleInfo.creator}</div>
-                                    <div className="flex items-center"><i className="fas fa-list-ol text-gray-400 mr-2"></i><span className="font-bold mr-1">問題数:</span> {riddleInfo.count}</div>
-                                    <div className="flex items-center"><i className="fas fa-stopwatch text-gray-400 mr-2"></i><span className="font-bold mr-1">制限時間:</span> {riddleInfo.limit}</div>
-                                </div>
-                            </div>
+                        <div className="text-xs md:text-sm text-gray-500">ユーザーネーム: {handleName || "未入力"}</div>
+                    </div>
+                    <div className="space-y-4 md:space-y-6">
+                        <div className="bg-gray-50 p-4 md:p-6 rounded border border-gray-200">
+                            <label className="block text-gray-700 font-bold mb-2 text-sm md:text-base">ハンドルネーム</label>
+                            <input type="text" className="w-full border-2 border-gray-300 p-2 md:p-3 rounded focus:outline-none focus:border-red-500 text-base md:text-lg" placeholder="ここに入力してください" value={handleName} onChange={(e) => setHandleName(e.target.value)} />
                         </div>
-                        <div className="flex flex-col items-center justify-center mt-8 md:mt-12 space-y-4">
-                            <button 
-                                onClick={() => handleName && onStart(handleName, selectedRiddle)} 
-                                disabled={!handleName} 
-                                className={`font-bold text-lg md:text-xl py-3 md:py-4 px-8 md:px-12 rounded shadow-lg transition-all ${handleName ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-gray-400 text-white cursor-not-allowed'}`}
-                            >
-                                模試を受ける
-                            </button>
-                            <div className="text-xs text-gray-500 text-center leading-relaxed">
-                                <p>・このサイトは本家謎検の挙動とは異なることがあります。</p>
-                                <p>・このサイトはSCRAP、および本家謎検とは一切関係ございません。</p>
-                                {/* 追加: ユーザーへの注意書き */}
-                                <p>・ページの再読み込みや「戻る」を行うと、スタート画面に戻され進行状況がリセットされます。</p>
-                                <p>・推奨環境: Google Chrome / Safari 最新版</p>
+                        <div className="bg-gray-50 p-4 md:p-6 rounded border border-gray-200">
+                            <label className="block text-gray-700 font-bold mb-4 text-sm md:text-base">問題セット選択</label>
+                            <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4 mb-4">
+                                <button 
+                                    onClick={() => setSelectedRiddle(1)}
+                                    className={`border-2 font-bold py-2 md:py-3 px-2 md:px-4 rounded shadow-sm font-number transition-colors text-sm md:text-base ${selectedRiddle === 1 ? 'bg-red-600 border-red-600 text-white' : 'bg-red-50 border-red-500 text-red-700'}`}
+                                >
+                                    riddle1
+                                </button>
+                                
+                                <button 
+                                    onClick={() => setSelectedRiddle(2)}
+                                    className={`border-2 font-bold py-2 md:py-3 px-2 md:px-4 rounded shadow-sm font-number transition-colors text-sm md:text-base ${selectedRiddle === 2 ? 'bg-red-600 border-red-600 text-white' : 'bg-red-50 border-red-500 text-red-700'}`}
+                                >
+                                    riddle2
+                                </button>
+
+                                {[3,4,5,6,7,8,9,10].map(num => (
+                                    <button key={num} disabled className="bg-gray-200 text-gray-400 font-bold py-2 md:py-3 px-2 md:px-4 rounded cursor-not-allowed font-number text-sm md:text-base">riddle{num}</button>
+                                ))}
+                            </div>
+                            {/* 制作者情報表示エリア */}
+                            <div className="text-sm md:text-base text-gray-700 bg-white p-3 rounded border border-gray-300 flex flex-wrap gap-4 items-center">
+                                <div className="flex items-center"><i className="fas fa-user-edit text-gray-400 mr-2"></i><span className="font-bold mr-1">制作者:</span> {riddleInfo.creator}</div>
+                                <div className="flex items-center"><i className="fas fa-list-ol text-gray-400 mr-2"></i><span className="font-bold mr-1">問題数:</span> {riddleInfo.count}</div>
+                                <div className="flex items-center"><i className="fas fa-stopwatch text-gray-400 mr-2"></i><span className="font-bold mr-1">制限時間:</span> {riddleInfo.limit}</div>
                             </div>
                         </div>
                     </div>
+                    <div className="flex flex-col items-center justify-center mt-8 md:mt-12 space-y-4">
+                        <button 
+                            onClick={() => handleName && onStart(handleName, selectedRiddle)} 
+                            disabled={!handleName} 
+                            className={`font-bold text-lg md:text-xl py-3 md:py-4 px-8 md:px-12 rounded shadow-lg transition-all ${handleName ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-gray-400 text-white cursor-not-allowed'}`}
+                        >
+                            模試を受ける
+                        </button>
+                        <div className="text-xs text-gray-500 text-center leading-relaxed">
+                            <p>・このサイトは本家謎検の挙動とは異なることがあります。</p>
+                            <p>・このサイトはSCRAP、および本家謎検とは一切関係ございません。</p>
+                            <p>・ページの再読み込みや「戻る」を行うと、スタート画面に戻され進行状況がリセットされます。</p>
+                            <p>・推奨環境: Google Chrome / Safari 最新版</p>
+                        </div>
+                    </div>
                 </div>
-            );
-        };
+            </div>
+        </div>
+    );
+};
 
         const CanvasLayer = ({ drawings, onDrawEnd, tool, color, isVisible }) => {
             const canvasRef = useRef(null);
