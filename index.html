@@ -358,16 +358,12 @@
             );
         };
 
-        // 【修正1】 ExamScreenコンポーネントの修正（引数の追加と制限時間の適用）
         const ExamScreen = ({ userName, onFinish, config, timeLimit }) => {
             const [currentQIndex, setCurrentQIndex] = useState(0);
             const [answers, setAnswers] = useState({});
             const [lockedAnswers, setLockedAnswers] = useState({});
             const [bookmarks, setBookmarks] = useState({});
-            
-            // 【修正2】 TIME_LIMIT_MINUTES定数ではなく、propsの timeLimit を使用 (なければデフォルト60分)
             const [timeLeft, setTimeLeft] = useState((timeLimit || 60) * 60);
-
             const [isMenuOpen, setIsMenuOpen] = useState(false);
             const [drawings, setDrawings] = useState({});
             const [redoStack, setRedoStack] = useState({});
@@ -458,10 +454,13 @@
                 setRedoStack(prev => { const next = { ...prev }; delete next[currentQ.id]; return next; });
             }, [currentQ.id]);
 
+            // 【Undo機能修正】
             const undo = () => {
                 setDrawings(prev => {
                     const qDrawings = prev[currentQ.id] || [];
-                    if (qRedos => qDrawings.length === 0) return prev;
+                    
+                    if (qDrawings.length === 0) return prev; // 修正: 正しい条件式
+
                     const last = qDrawings[qDrawings.length - 1];
                     const remaining = qDrawings.slice(0, -1);
                     setRedoStack(rPrev => ({ ...rPrev, [currentQ.id]: [...(rPrev[currentQ.id] || []), last] }));
@@ -469,19 +468,14 @@
                 });
             };
 
-            // 2. Redo機能のバグ修正
+            // 【Redo機能】 (前回修正済みですが念のため維持)
             const redo = () => {
                 setRedoStack(prev => {
                     const qRedos = prev[currentQ.id] || [];
                     if (qRedos.length === 0) return prev;
                     const toRestore = qRedos[qRedos.length - 1];
-
-                    // 【修正3】 ここに remaining の定義を追加
                     const remaining = qRedos.slice(0, -1);
-
                     setDrawings(dPrev => ({ ...dPrev, [currentQ.id]: [...(dPrev[currentQ.id] || []), toRestore] }));
-                    
-                    // 修正前: return { ...prev, [currentQ.id]: remaining }; (remaining未定義エラー)
                     return { ...prev, [currentQ.id]: remaining }; 
                 });
             };
