@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>謎検もどき</title>
     
     <!-- React & ReactDOM -->
@@ -24,7 +24,8 @@
             font-family: YakuHanJP, "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
             user-select: none; 
             touch-action: none; 
-            overflow: hidden; 
+            overflow: hidden;
+            background-color: #333; /* 枠外の背景色 */
         }
 
         .font-number {
@@ -47,22 +48,48 @@
         .animate-fade-in {
             animation: fadeIn 0.5s ease-in-out;
         }
+
+        /* モバイルでのタップハイライトを無効化 */
+        * {
+            -webkit-tap-highlight-color: transparent;
+        }
     </style>
 </head>
-<body class="text-gray-800 h-screen w-screen overflow-hidden relative">
+<body class="text-gray-800 w-full overflow-hidden relative">
     
-    <!-- Fixed Background Layer -->
-    <div style="position: absolute; inset: 0; z-index: -1; background-image: url('deco/back.png'); background-repeat: repeat; background-position: center; opacity: 0.5;"></div>
-
-    <div id="root" class="h-full w-full"></div>
+    <div id="root" class="w-full h-full"></div>
 
     <script type="text/babel">
         const { useState, useEffect, useRef, useMemo, forwardRef, useCallback } = React;
 
         // --- Constants ---
         const TIME_LIMIT_MINUTES = 60;
-        // 対応する拡張子のリスト（優先順位順）
         const FILE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.jfif', '.gif'];
+
+        // --- Custom Hook: Viewport Height ---
+        // モバイルブラウザのアドレスバーを除いた真の高さを取得する
+        const useViewportHeight = () => {
+            const [height, setHeight] = useState(window.innerHeight);
+
+            useEffect(() => {
+                const handleResize = () => {
+                    setHeight(window.innerHeight);
+                };
+
+                // 初期設定
+                handleResize();
+
+                window.addEventListener('resize', handleResize);
+                window.addEventListener('orientationchange', handleResize);
+                
+                return () => {
+                    window.removeEventListener('resize', handleResize);
+                    window.removeEventListener('orientationchange', handleResize);
+                };
+            }, []);
+
+            return height;
+        };
 
         // --- Helper: Circled Numbers ---
         const getCircledNumber = (index) => {
@@ -88,7 +115,6 @@
             );
         };
 
-        // src (単一パス) または srcs (パスの配列) を受け取り、ロード可能な最初の画像を表示するコンポーネント
         const AsyncImage = ({ src, srcs, alt, className, fallback }) => {
             const [loadedSrc, setLoadedSrc] = useState(null);
             const [loading, setLoading] = useState(true);
@@ -99,7 +125,6 @@
                 setError(false);
                 setLoadedSrc(null);
 
-                // 配列化して候補リストを作成
                 const candidates = srcs || (src ? [src] : []);
                 
                 if (candidates.length === 0) {
@@ -134,7 +159,7 @@
                     img.onerror = () => {
                         if (isMounted) {
                             attemptIndex++;
-                            loadNext(); // 次の候補を試す
+                            loadNext();
                         }
                     };
                 };
@@ -142,7 +167,7 @@
                 loadNext();
 
                 return () => { isMounted = false; };
-            }, [src, srcs]); // src または srcs が変更されたら再実行
+            }, [src, srcs]);
 
             if (error) return fallback || <div className="flex flex-col items-center text-gray-400 p-2 justify-center h-full bg-white border"><i className="fas fa-image text-2xl mb-1"></i><span className="text-[10px] mt-1">No Image</span></div>;
 
@@ -160,47 +185,46 @@
 
             return (
                 <div className="flex flex-col items-center justify-center h-full p-4 overflow-y-auto relative z-20">
-                    <div className="max-w-4xl w-full bg-white p-8 space-y-8 shadow-xl rounded-lg">
-                        <div className="border-b-2 border-red-600 pb-4 mb-8 flex justify-between items-end">
-                            <div className="h-12">
-                                {/* ロゴ画像 */}
+                    <div className="max-w-4xl w-full bg-white p-6 md:p-8 space-y-6 md:space-y-8 shadow-xl rounded-lg">
+                        <div className="border-b-2 border-red-600 pb-4 mb-4 md:mb-8 flex justify-between items-end">
+                            <div className="h-10 md:h-12">
                                 <img src="deco/logo.png" alt="ロゴ" className="h-full object-contain" onError={(e) => e.target.style.display = 'none'} />
                             </div>
-                            <div className="text-sm text-gray-500">ユーザーネーム: {handleName || "未入力"}</div>
+                            <div className="text-xs md:text-sm text-gray-500">ユーザーネーム: {handleName || "未入力"}</div>
                         </div>
-                        <div className="space-y-6">
-                            <div className="bg-gray-50 p-6 rounded border border-gray-200">
-                                <label className="block text-gray-700 font-bold mb-2">ハンドルネーム (ユーザーネーム)</label>
-                                <input type="text" className="w-full border-2 border-gray-300 p-3 rounded focus:outline-none focus:border-red-500 text-lg" placeholder="ここに入力してください" value={handleName} onChange={(e) => setHandleName(e.target.value)} />
+                        <div className="space-y-4 md:space-y-6">
+                            <div className="bg-gray-50 p-4 md:p-6 rounded border border-gray-200">
+                                <label className="block text-gray-700 font-bold mb-2 text-sm md:text-base">ハンドルネーム</label>
+                                <input type="text" className="w-full border-2 border-gray-300 p-2 md:p-3 rounded focus:outline-none focus:border-red-500 text-base md:text-lg" placeholder="ここに入力してください" value={handleName} onChange={(e) => setHandleName(e.target.value)} />
                             </div>
-                            <div className="bg-gray-50 p-6 rounded border border-gray-200">
-                                <label className="block text-gray-700 font-bold mb-4">問題セット選択</label>
-                                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                            <div className="bg-gray-50 p-4 md:p-6 rounded border border-gray-200">
+                                <label className="block text-gray-700 font-bold mb-4 text-sm md:text-base">問題セット選択</label>
+                                <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4">
                                     <button 
                                         onClick={() => setSelectedRiddle(1)}
-                                        className={`border-2 font-bold py-3 px-4 rounded shadow-sm font-number transition-colors ${selectedRiddle === 1 ? 'bg-red-600 border-red-600 text-white' : 'bg-red-50 border-red-500 text-red-700'}`}
+                                        className={`border-2 font-bold py-2 md:py-3 px-2 md:px-4 rounded shadow-sm font-number transition-colors text-sm md:text-base ${selectedRiddle === 1 ? 'bg-red-600 border-red-600 text-white' : 'bg-red-50 border-red-500 text-red-700'}`}
                                     >
                                         riddle1
                                     </button>
                                     
                                     <button 
                                         onClick={() => setSelectedRiddle(2)}
-                                        className={`border-2 font-bold py-3 px-4 rounded shadow-sm font-number transition-colors ${selectedRiddle === 2 ? 'bg-red-600 border-red-600 text-white' : 'bg-red-50 border-red-500 text-red-700'}`}
+                                        className={`border-2 font-bold py-2 md:py-3 px-2 md:px-4 rounded shadow-sm font-number transition-colors text-sm md:text-base ${selectedRiddle === 2 ? 'bg-red-600 border-red-600 text-white' : 'bg-red-50 border-red-500 text-red-700'}`}
                                     >
                                         riddle2
                                     </button>
 
                                     {[3,4,5,6,7,8,9,10].map(num => (
-                                        <button key={num} disabled className="bg-gray-200 text-gray-400 font-bold py-3 px-4 rounded cursor-not-allowed font-number">riddle{num}</button>
+                                        <button key={num} disabled className="bg-gray-200 text-gray-400 font-bold py-2 md:py-3 px-2 md:px-4 rounded cursor-not-allowed font-number text-sm md:text-base">riddle{num}</button>
                                     ))}
                                 </div>
                             </div>
                         </div>
-                        <div className="flex justify-center mt-12">
+                        <div className="flex justify-center mt-8 md:mt-12">
                             <button 
                                 onClick={() => handleName && onStart(handleName, selectedRiddle)} 
                                 disabled={!handleName} 
-                                className={`font-bold text-xl py-4 px-12 rounded shadow-lg transition-all ${handleName ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-gray-400 text-white cursor-not-allowed'}`}
+                                className={`font-bold text-lg md:text-xl py-3 md:py-4 px-8 md:px-12 rounded shadow-lg transition-all ${handleName ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-gray-400 text-white cursor-not-allowed'}`}
                             >
                                 模試を受ける
                             </button>
@@ -248,8 +272,6 @@
                 ctx.setTransform(1, 0, 0, 1, 0, 0);
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 ctx.restore();
-                // 修正箇所：isVisibleに関わらず描画内容は常に表示する（下のif文を削除）
-                // if (!isVisible) return; 
                 drawings.forEach(stroke => drawStroke(ctx, stroke));
             };
 
@@ -465,83 +487,96 @@
             }
 
             return (
-                <div className="flex flex-col h-full font-sans relative z-20">
+                <div className="flex flex-col h-full font-sans relative z-20 overflow-hidden">
                     <ConfirmationModal isOpen={modalConfig.isOpen} message={modalConfig.message} onConfirm={modalConfig.onConfirm} onCancel={() => setModalConfig(prev => ({ ...prev, isOpen: false }))} />
-                    <div className="bg-white border-b border-red-500 h-14 flex items-center justify-between px-4 shrink-0 z-20">
-                        <div className="flex items-center space-x-4">
-                            <div className="h-8"><img src="deco/logo.png" alt="ロゴ" className="h-full object-contain" /></div>
+                    
+                    {/* Header: 高さ固定。スマホでは高さを少し詰める */}
+                    <div className="bg-white border-b border-red-500 h-12 md:h-14 flex items-center justify-between px-2 md:px-4 shrink-0 z-20">
+                        <div className="flex items-center space-x-2 md:space-x-4">
+                            <div className="h-6 md:h-8"><img src="deco/logo.png" alt="ロゴ" className="h-full object-contain" /></div>
                             <div className="text-xs text-gray-500 hidden md:block">ユーザーネーム: {userName}</div>
-                            <button onClick={() => confirmAction('受検を終了しますか？(後戻りできません)', handleFinish)} className="border border-gray-400 text-gray-700 px-3 py-1 text-xs hover:bg-gray-100">受検を終了する &gt;</button>
+                            <button onClick={() => confirmAction('受検を終了しますか？(後戻りできません)', handleFinish)} className="border border-gray-400 text-gray-700 px-2 py-0.5 md:px-3 md:py-1 text-[10px] md:text-xs hover:bg-gray-100 whitespace-nowrap">終了する &gt;</button>
                         </div>
                         <div className="flex items-end">
-                            <span className="text-sm text-gray-600 mr-1 mb-1">残り</span>
-                            <span className="text-3xl font-mono text-gray-800 leading-none font-number">{formatTime(timeLeft)}</span>
+                            <span className="text-[10px] md:text-sm text-gray-600 mr-1 mb-1">残り</span>
+                            <span className="text-2xl md:text-3xl font-mono text-gray-800 leading-none font-number">{formatTime(timeLeft)}</span>
                         </div>
                     </div>
+
+                    {/* Main Content: Flexで可変 */}
                     <div className="flex flex-1 overflow-hidden relative">
+                        {/* Center Area: Image & Canvas */}
                         <div className="flex-1 flex flex-col relative z-0 h-full overflow-hidden">
-                            <div className="flex-1 flex items-center justify-center p-2 md:p-4 overflow-hidden relative">
+                            <div className="flex-1 flex items-center justify-center p-2 overflow-hidden relative bg-gray-50/50">
                                 <div className="w-full h-full max-w-5xl relative flex items-center justify-center">
-                                    {currentQIndex > 0 && <button onClick={() => navigate('prev')} className="absolute left-0 top-1/2 -translate-y-1/2 z-30 bg-white/50 hover:bg-white rounded-full p-2 text-gray-600 shadow-lg transform -translate-x-1/2 md:translate-x-0 w-16 h-16 flex items-center justify-center"><i className="fas fa-chevron-left text-3xl"></i><div className="absolute -bottom-4 text-xs text-center font-number bg-white/80 px-1 rounded">{String(currentQIndex).padStart(2,'0')}</div></button>}
-                                    {currentQIndex < config.length - 1 && <button onClick={() => navigate('next')} className="absolute right-0 top-1/2 -translate-y-1/2 z-30 bg-white/50 hover:bg-white rounded-full p-2 text-gray-600 shadow-lg transform translate-x-1/2 md:translate-x-0 w-16 h-16 flex items-center justify-center"><i className="fas fa-chevron-right text-3xl"></i><div className="absolute -bottom-4 text-xs text-center font-number bg-white/80 px-1 rounded">{String(currentQIndex + 2).padStart(2,'0')}</div></button>}
-                                    <div className="relative w-full h-full select-none flex items-center justify-center bg-white shadow-lg">
-                                        {/* 修正箇所: 画像パスの配列を渡す */}
+                                    {currentQIndex > 0 && <button onClick={() => navigate('prev')} className="absolute left-0 top-1/2 -translate-y-1/2 z-30 bg-white/50 hover:bg-white rounded-full p-1 md:p-2 text-gray-600 shadow-lg transform -translate-x-1/2 md:translate-x-0 w-12 h-12 md:w-16 md:h-16 flex items-center justify-center"><i className="fas fa-chevron-left text-2xl md:text-3xl"></i><div className="absolute -bottom-4 text-[10px] md:text-xs text-center font-number bg-white/80 px-1 rounded">{String(currentQIndex).padStart(2,'0')}</div></button>}
+                                    {currentQIndex < config.length - 1 && <button onClick={() => navigate('next')} className="absolute right-0 top-1/2 -translate-y-1/2 z-30 bg-white/50 hover:bg-white rounded-full p-1 md:p-2 text-gray-600 shadow-lg transform translate-x-1/2 md:translate-x-0 w-12 h-12 md:w-16 md:h-16 flex items-center justify-center"><i className="fas fa-chevron-right text-2xl md:text-3xl"></i><div className="absolute -bottom-4 text-[10px] md:text-xs text-center font-number bg-white/80 px-1 rounded">{String(currentQIndex + 2).padStart(2,'0')}</div></button>}
+                                    
+                                    <div className="relative w-full h-full select-none flex items-center justify-center bg-white shadow-lg border border-gray-200">
                                         <AsyncImage srcs={currentQ.imageSrcs} alt={`Problem ${currentQ.id}`} className="max-w-full max-h-full object-contain pointer-events-none" fallback={<div className="absolute inset-0 w-full h-full bg-gray-50 flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-300 flex"><i className="fas fa-image text-4xl mb-2"></i><span className="text-xl font-bold text-gray-500">問題 {currentQ.id}</span><span className="text-xs mt-2">画像を配置してください</span></div>} />
                                         <div className="absolute inset-0 w-full h-full"><CanvasLayer drawings={drawings[currentQ.id] || []} onDrawEnd={handleDrawEnd} tool={tool} color={color} isVisible={isToolbarVisible} /></div>
                                     </div>
                                 </div>
                             </div>
-                            <div className="bg-white border-t border-gray-300 p-2 md:p-3 shrink-0 z-20 shadow-md">
-                                <div className="flex justify-center items-center space-x-1 md:space-x-2 mb-2 bg-gray-100 py-1 px-2 rounded-lg inline-block mx-auto min-w-max">
-                                    <button onClick={() => setIsToolbarVisible(!isToolbarVisible)} className={`w-10 h-10 flex items-center justify-center rounded border border-transparent text-gray-600 hover:bg-gray-200 ${isToolbarVisible ? 'text-red-600' : ''}`}><i className={`fas ${isToolbarVisible ? 'fa-eye' : 'fa-eye-slash'} text-lg`}></i></button>
+                            
+                            {/* Footer (Answer Area): 高さ自動調節 */}
+                            <div className="bg-white border-t border-gray-300 p-2 shrink-0 z-20 shadow-[0_-2px_10px_rgba(0,0,0,0.1)]">
+                                {/* Toolbar Line */}
+                                <div className="flex justify-center items-center mb-2 bg-gray-100 py-1 px-2 rounded-lg inline-block mx-auto min-w-max max-w-full overflow-x-auto custom-scrollbar">
+                                    <button onClick={() => setIsToolbarVisible(!isToolbarVisible)} className={`w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded border border-transparent text-gray-600 hover:bg-gray-200 ${isToolbarVisible ? 'text-red-600' : ''}`}><i className={`fas ${isToolbarVisible ? 'fa-eye' : 'fa-eye-slash'} text-sm md:text-lg`}></i></button>
                                     <div className={`flex items-center space-x-1 md:space-x-2 ${isToolbarVisible ? '' : 'invisible pointer-events-none'}`}>
-                                        <div className="w-px h-6 bg-gray-300 mx-1"></div>
-                                        <button onClick={() => setTool('pencil')} className={`w-10 h-10 flex items-center justify-center rounded border ${tool==='pencil' ? 'border-red-500 bg-red-50 text-red-600' : 'border-transparent text-gray-600 hover:bg-gray-200'}`}><i className="fas fa-pencil-alt text-lg"></i></button>
-                                        <button onClick={() => setTool('line')} className={`w-10 h-10 flex items-center justify-center rounded border ${tool==='line' ? 'border-red-500 bg-red-50 text-red-600' : 'border-transparent text-gray-600 hover:bg-gray-200'}`}><i className="fas fa-slash text-lg"></i></button>
-                                        <button onClick={() => setTool('eraser')} className={`w-10 h-10 flex items-center justify-center rounded border ${tool==='eraser' ? 'border-red-500 bg-red-50 text-red-600' : 'border-transparent text-gray-600 hover:bg-gray-200'}`}><i className="fas fa-eraser text-lg"></i></button>
-                                        <div className="w-px h-6 bg-gray-300 mx-1"></div>
-                                        <button onClick={() => setColor('black')} className={`w-8 h-8 rounded-full border-2 mx-1 flex items-center justify-center ${color==='black' ? 'border-red-500 scale-110' : 'border-transparent opacity-70 hover:opacity-100'}`}><div className="w-full h-full rounded-full border border-gray-300 bg-black"></div></button>
-                                        <button onClick={() => setColor('red')} className={`w-8 h-8 rounded-full border-2 mx-1 flex items-center justify-center ${color==='red' ? 'border-red-500 scale-110' : 'border-transparent opacity-70 hover:opacity-100'}`}><div className="w-full h-full rounded-full border border-gray-300 bg-red-600"></div></button>
-                                        <button onClick={() => setColor('blue')} className={`w-8 h-8 rounded-full border-2 mx-1 flex items-center justify-center ${color==='blue' ? 'border-red-500 scale-110' : 'border-transparent opacity-70 hover:opacity-100'}`}><div className="w-full h-full rounded-full border border-gray-300 bg-blue-600"></div></button>
-                                        <div className="w-px h-6 bg-gray-300 mx-1"></div>
-                                        <button onClick={undo} className="w-10 h-10 flex items-center justify-center rounded border border-transparent text-gray-600 hover:bg-gray-200"><i className="fas fa-undo text-lg"></i></button>
-                                        <button onClick={redo} className="w-10 h-10 flex items-center justify-center rounded border border-transparent text-gray-600 hover:bg-gray-200"><i className="fas fa-redo text-lg"></i></button>
-                                        <button onClick={clearAll} className="w-10 h-10 flex items-center justify-center rounded border border-transparent text-gray-600 hover:bg-gray-200"><i className="fas fa-trash-alt text-lg"></i></button>
+                                        <div className="w-px h-5 md:h-6 bg-gray-300 mx-1"></div>
+                                        <button onClick={() => setTool('pencil')} className={`w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded border ${tool==='pencil' ? 'border-red-500 bg-red-50 text-red-600' : 'border-transparent text-gray-600 hover:bg-gray-200'}`}><i className="fas fa-pencil-alt text-sm md:text-lg"></i></button>
+                                        <button onClick={() => setTool('line')} className={`w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded border ${tool==='line' ? 'border-red-500 bg-red-50 text-red-600' : 'border-transparent text-gray-600 hover:bg-gray-200'}`}><i className="fas fa-slash text-sm md:text-lg"></i></button>
+                                        <button onClick={() => setTool('eraser')} className={`w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded border ${tool==='eraser' ? 'border-red-500 bg-red-50 text-red-600' : 'border-transparent text-gray-600 hover:bg-gray-200'}`}><i className="fas fa-eraser text-sm md:text-lg"></i></button>
+                                        <div className="w-px h-5 md:h-6 bg-gray-300 mx-1"></div>
+                                        <button onClick={() => setColor('black')} className={`w-6 h-6 md:w-8 md:h-8 rounded-full border-2 mx-0.5 md:mx-1 flex items-center justify-center ${color==='black' ? 'border-red-500 scale-110' : 'border-transparent opacity-70 hover:opacity-100'}`}><div className="w-full h-full rounded-full border border-gray-300 bg-black"></div></button>
+                                        <button onClick={() => setColor('red')} className={`w-6 h-6 md:w-8 md:h-8 rounded-full border-2 mx-0.5 md:mx-1 flex items-center justify-center ${color==='red' ? 'border-red-500 scale-110' : 'border-transparent opacity-70 hover:opacity-100'}`}><div className="w-full h-full rounded-full border border-gray-300 bg-red-600"></div></button>
+                                        <button onClick={() => setColor('blue')} className={`w-6 h-6 md:w-8 md:h-8 rounded-full border-2 mx-0.5 md:mx-1 flex items-center justify-center ${color==='blue' ? 'border-red-500 scale-110' : 'border-transparent opacity-70 hover:opacity-100'}`}><div className="w-full h-full rounded-full border border-gray-300 bg-blue-600"></div></button>
+                                        <div className="w-px h-5 md:h-6 bg-gray-300 mx-1"></div>
+                                        <button onClick={undo} className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded border border-transparent text-gray-600 hover:bg-gray-200"><i className="fas fa-undo text-sm md:text-lg"></i></button>
+                                        <button onClick={redo} className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded border border-transparent text-gray-600 hover:bg-gray-200"><i className="fas fa-redo text-sm md:text-lg"></i></button>
+                                        <button onClick={clearAll} className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded border border-transparent text-gray-600 hover:bg-gray-200"><i className="fas fa-trash-alt text-sm md:text-lg"></i></button>
                                     </div>
                                 </div>
-                                <div className="flex items-center space-x-2 md:space-x-4 max-w-4xl mx-auto">
-                                    {/* 修正箇所：ブックマークONのとき背景を赤色に変更 */}
-                                    <button onClick={() => toggleBookmark(currentQ.id)} className={`flex flex-col items-center justify-center p-2 w-14 h-14 ${bookmarks[currentQ.id] ? 'bg-red-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'} transition-colors rounded-sm`}>
-                                        <div className="text-[9px] mb-0.5 whitespace-nowrap">後で解く</div>
-                                        <i className={`fas fa-bookmark text-xl ${bookmarks[currentQ.id] ? 'text-white' : 'text-gray-400'}`}></i>
+                                
+                                {/* Answer Line: スマホではフレックス折り返しを許容しレイアウトを調整 */}
+                                <div className="flex flex-row items-stretch space-x-2 max-w-4xl mx-auto h-12 md:h-14">
+                                    <button onClick={() => toggleBookmark(currentQ.id)} className={`flex flex-col items-center justify-center px-1 md:p-2 w-10 md:w-14 shrink-0 ${bookmarks[currentQ.id] ? 'bg-red-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'} transition-colors rounded-sm`}>
+                                        <div className="text-[8px] md:text-[9px] mb-0.5 whitespace-nowrap">後で</div>
+                                        <i className={`fas fa-bookmark text-sm md:text-xl ${bookmarks[currentQ.id] ? 'text-white' : 'text-gray-400'}`}></i>
                                     </button>
-                                    <div className="flex-1 border-2 border-black h-14 flex items-center px-4 relative bg-gray-100">
+                                    
+                                    <div className="flex-1 border-2 border-black flex items-center px-2 md:px-4 relative bg-gray-100 overflow-hidden">
                                         {currentQ.type === 'text' ? (
-                                            <input type="text" placeholder={lockedAnswers[currentQ.id] ? "" : "解答を入力してください"} value={answers[currentQ.id] || ""} onChange={(e) => handleAnswerChange(e.target.value)} disabled={lockedAnswers[currentQ.id]} className="w-full h-full bg-transparent text-xl outline-none disabled:text-gray-500" />
+                                            <input type="text" placeholder={lockedAnswers[currentQ.id] ? "" : "解答入力"} value={answers[currentQ.id] || ""} onChange={(e) => handleAnswerChange(e.target.value)} disabled={lockedAnswers[currentQ.id]} className="w-full h-full bg-transparent text-lg md:text-xl outline-none disabled:text-gray-500" />
                                         ) : (
-                                            <div className="flex space-x-2 md:space-x-4 w-full h-full items-center overflow-x-auto">
+                                            <div className="flex space-x-2 md:space-x-4 w-full h-full items-center overflow-x-auto no-scrollbar">
                                                 {currentQ.options.map((opt, idx) => (
-                                                    <button key={idx} disabled={lockedAnswers[currentQ.id]} onClick={() => handleAnswerChange(idx)} className={`flex items-center space-x-1 px-2 py-1 rounded whitespace-nowrap ${answers[currentQ.id] === idx ? 'text-red-600 font-bold' : 'text-gray-600'}`}>
-                                                        <span className={`w-4 h-4 rounded-full border flex-shrink-0 ${answers[currentQ.id] === idx ? 'bg-red-600 border-red-600' : 'border-gray-400'}`}></span>
-                                                        <span>{getCircledNumber(idx)} {opt}</span>
+                                                    <button key={idx} disabled={lockedAnswers[currentQ.id]} onClick={() => handleAnswerChange(idx)} className={`flex items-center space-x-1 px-1.5 py-1 rounded whitespace-nowrap ${answers[currentQ.id] === idx ? 'text-red-600 font-bold' : 'text-gray-600'}`}>
+                                                        <span className={`w-3 h-3 md:w-4 md:h-4 rounded-full border flex-shrink-0 ${answers[currentQ.id] === idx ? 'bg-red-600 border-red-600' : 'border-gray-400'}`}></span>
+                                                        <span className="text-sm md:text-base">{getCircledNumber(idx)} {opt}</span>
                                                     </button>
                                                 ))}
                                             </div>
                                         )}
                                     </div>
-                                    <div className="w-28 md:w-32">
+                                    
+                                    <div className="w-20 md:w-32 shrink-0">
                                         {lockedAnswers[currentQ.id] ? (
-                                            <button onClick={resetAnswer} className="w-full h-14 border-2 border-red-600 text-red-600 font-bold hover:bg-red-50 text-lg">リセット</button>
+                                            <button onClick={resetAnswer} className="w-full h-full border-2 border-red-600 text-red-600 font-bold hover:bg-red-50 text-sm md:text-lg">リセット</button>
                                         ) : (
-                                            <button onClick={submitAnswer} className="w-full h-14 border-2 border-red-800 text-red-800 font-bold bg-white hover:bg-red-50 text-lg shadow-sm">解答する</button>
+                                            <button onClick={submitAnswer} className="w-full h-full border-2 border-red-800 text-red-800 font-bold bg-white hover:bg-red-50 text-sm md:text-lg shadow-sm">解答</button>
                                         )}
                                     </div>
                                 </div>
                                 <div className="md:hidden mt-1 text-center">
-                                    <button onClick={() => setIsMenuOpen(true)} className="text-xs font-bold flex items-center justify-center w-full py-1 bg-white border shadow-sm"><i className="fas fa-list-ol mr-2"></i> 問題一覧を見る</button>
+                                    <button onClick={() => setIsMenuOpen(true)} className="text-[10px] font-bold flex items-center justify-center w-full py-1 bg-white border shadow-sm text-gray-500"><i className="fas fa-list-ol mr-1"></i> 一覧</button>
                                 </div>
                             </div>
                         </div>
+
+                        {/* Sidebar (Desktop only) */}
                         <div className="hidden md:flex w-64 bg-white border-l border-gray-300 flex-col shrink-0 overflow-hidden h-full">
                             <div ref={listContainerRef} className="flex-1 overflow-y-auto custom-scrollbar pb-20">
                                 {config.map((q, idx) => (
@@ -550,6 +585,8 @@
                             </div>
                         </div>
                     </div>
+                    
+                    {/* Mobile Menu Modal */}
                     {isMenuOpen && (
                         <div className="fixed inset-0 z-50 bg-gray-800/80 flex items-center justify-center p-4">
                             <div className="bg-white w-full h-full max-w-md rounded-lg overflow-hidden flex flex-col relative">
@@ -570,7 +607,7 @@
         };
 
         const FinishScreen = ({ userAnswers, onRestart, config }) => {
-            const [explanationImageSrcs, setExplanationImageSrcs] = useState(null); // 配列を受け取るように変更
+            const [explanationImageSrcs, setExplanationImageSrcs] = useState(null);
             const results = useMemo(() => {
                 let totalScore = 0;
                 const grading = config.map(q => {
@@ -602,7 +639,6 @@
                         isCorrect = q.correctAnswerList.some(ans => ans === userAnsText || ans === userAnsFull);
                     } else {
                         displayUserAns = userAns || "未回答";
-                        // Display ONLY the primary answer (2nd column in CSV)
                         displayCorrectAns = q.primaryAnswer || "";
                         isCorrect = q.correctAnswerList.includes(userAns);
                     }
@@ -616,33 +652,33 @@
             return (
                 <div className="flex flex-col h-full font-sans overflow-hidden relative z-20">
                      <div className="border-b-2 border-red-600 p-4 flex justify-between items-center bg-white shrink-0">
-                        <h1 className="text-2xl font-bold text-red-600">受検結果</h1>
-                        <div className="text-xl font-bold">合計得点: <span className="text-3xl text-red-600 font-number">{results.totalScore}</span> / 100点</div>
+                        <h1 className="text-xl md:text-2xl font-bold text-red-600">受検結果</h1>
+                        <div className="text-lg md:text-xl font-bold">合計得点: <span className="text-2xl md:text-3xl text-red-600 font-number">{results.totalScore}</span> / 100点</div>
                     </div>
-                    <div className="flex-1 overflow-y-auto p-4 md:p-8">
+                    <div className="flex-1 overflow-y-auto p-2 md:p-8">
                         <div className="max-w-5xl mx-auto bg-white shadow rounded-lg overflow-hidden">
-                            <table className="w-full text-left border-collapse">
+                            <table className="w-full text-left border-collapse text-sm md:text-base">
                                 <thead className="bg-gray-100 border-b border-gray-300">
                                     <tr>
-                                        <th className="p-3 text-center w-16">No.</th>
-                                        <th className="p-3 w-1/4">正解</th>
-                                        <th className="p-3 w-1/4">あなたの答え</th>
-                                        <th className="p-3 text-center w-16">判定</th>
-                                        <th className="p-3 text-center w-24">解説</th>
+                                        <th className="p-2 md:p-3 text-center w-10 md:w-16">No.</th>
+                                        <th className="p-2 md:p-3 w-1/4">正解</th>
+                                        <th className="p-2 md:p-3 w-1/4">あなたの答え</th>
+                                        <th className="p-2 md:p-3 text-center w-10 md:w-16">判定</th>
+                                        <th className="p-2 md:p-3 text-center w-16 md:w-24">解説</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {results.grading.map((row) => (
                                         <tr key={row.id} className="border-b border-gray-200 hover:bg-gray-50">
-                                            <td className="p-3 text-center font-bold text-gray-700 font-number">{row.id}</td>
-                                            <td className="p-3 text-green-700 font-medium">{row.correctAns}</td>
-                                            <td className="p-3 text-gray-800">{row.userAns}</td>
-                                            <td className="p-3 text-center">
-                                                {row.isCorrect ? <i className="fas fa-check-circle text-green-500 text-2xl"></i> : <i className="fas fa-times-circle text-red-500 text-2xl"></i>}
+                                            <td className="p-2 md:p-3 text-center font-bold text-gray-700 font-number">{row.id}</td>
+                                            <td className="p-2 md:p-3 text-green-700 font-medium break-all">{row.correctAns}</td>
+                                            <td className="p-2 md:p-3 text-gray-800 break-all">{row.userAns}</td>
+                                            <td className="p-2 md:p-3 text-center">
+                                                {row.isCorrect ? <i className="fas fa-check-circle text-green-500 text-xl md:text-2xl"></i> : <i className="fas fa-times-circle text-red-500 text-xl md:text-2xl"></i>}
                                             </td>
-                                            <td className="p-3 text-center">
+                                            <td className="p-2 md:p-3 text-center">
                                                 <button onClick={() => setExplanationImageSrcs(row.explanationSrcs)} className="text-gray-600 hover:text-red-600 transition-colors flex items-center justify-center w-full">
-                                                    <i className="fas fa-book-open mr-1"></i> <span className="text-sm hidden sm:inline">解説</span>
+                                                    <i className="fas fa-book-open mr-1"></i> <span className="hidden sm:inline">解説</span>
                                                 </button>
                                             </td>
                                         </tr>
@@ -693,7 +729,6 @@
 
                         {/* 右側全体: 画像 (Rowspan 2) */}
                         <div className="col-start-2 row-start-1 row-end-3 w-16 h-full bg-white border border-gray-200 flex items-center justify-center overflow-hidden self-center">
-                             {/* 修正箇所: 画像パスの配列を渡す */}
                              <AsyncImage srcs={q.imageSrcs} className="w-full h-full object-cover" />
                         </div>
 
@@ -715,6 +750,7 @@
             const [finalAnswers, setFinalAnswers] = useState({});
             const [config, setConfig] = useState([]);
             const [loading, setLoading] = useState(false);
+            const viewportHeight = useViewportHeight(); // カスタムフックを使用
 
             // Function to load config for a specific riddle
             const loadRiddleData = async (riddleId) => {
@@ -757,19 +793,17 @@
                         const qId = i + 1;
                         const isSelection = !!selectionMap[qId];
 
-                        // パスのベースを作成（拡張子なし）
                         const qNum = String(qId).padStart(2, '0');
                         const imgBase = `riddle/riddle${riddleId}/riddle${riddleId}_${qNum}`;
                         const ansBase = `riddle/riddle${riddleId}/answer_${qNum}`;
                         
-                        // 拡張子のリストを元にパス候補配列を生成
                         const imageSrcs = FILE_EXTENSIONS.map(ext => imgBase + ext);
                         const explanationSrcs = FILE_EXTENSIONS.map(ext => ansBase + ext);
                         
                         tempConfig.push({
                             id: qId,
-                            imageSrcs: imageSrcs,          // 配列で保持
-                            explanationSrcs: explanationSrcs, // 配列で保持
+                            imageSrcs: imageSrcs,
+                            explanationSrcs: explanationSrcs,
                             points: points,
                             type: isSelection ? 'choice' : 'text',
                             options: selectionMap[qId] || [],
@@ -779,7 +813,7 @@
                     }
                     
                     setConfig(tempConfig);
-                    setScreen('exam'); // Only switch screen after successful load
+                    setScreen('exam'); 
                 } catch (e) {
                     console.error("CSV Load Error:", e);
                     alert(`データの読み込みに失敗しました。\n${e.message}`);
@@ -797,11 +831,14 @@
             const restart = () => { setFinalAnswers({}); setScreen('start'); };
 
             if (loading) {
-                return <div className="h-screen w-full flex items-center justify-center bg-white font-sans">設定データを読み込み中...</div>;
+                return <div className="w-full flex items-center justify-center bg-white font-sans" style={{ height: viewportHeight }}>設定データを読み込み中...</div>;
             }
 
             return (
-                <div className="h-screen w-full font-sans border-[8px] border-red-600 box-border overflow-hidden relative">
+                <div 
+                    className="w-full font-sans border-[4px] md:border-[8px] border-red-600 box-border overflow-hidden relative"
+                    style={{ height: viewportHeight }} // 正確な高さを適用
+                >
                     {/* Fixed Background Layer */}
                     <div style={{ position: 'absolute', inset: 0, zIndex: -1, backgroundImage: "url('deco/back.png')", backgroundRepeat: 'repeat', backgroundPosition: 'center', opacity: 0.5 }}></div>
 
