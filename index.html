@@ -25,7 +25,7 @@
             user-select: none; 
             touch-action: none; 
             overflow: hidden;
-            background-color: #333; /* 枠外の背景色 */
+            background-color: #fff; /* 枠外の背景色 */
         }
 
         .font-number {
@@ -34,7 +34,7 @@
         }
         
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #ffffff; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #888; }
         
@@ -495,7 +495,7 @@
                         <div className="flex items-center space-x-2 md:space-x-4">
                             <div className="h-6 md:h-8"><img src="deco/logo.png" alt="ロゴ" className="h-full object-contain" /></div>
                             <div className="text-xs text-gray-500 hidden md:block">ユーザーネーム: {userName}</div>
-                            <button onClick={() => confirmAction('受検を終了しますか？(後戻りできません)', handleFinish)} className="border border-gray-400 text-gray-700 px-2 py-0.5 md:px-3 md:py-1 text-[10px] md:text-xs hover:bg-gray-100 whitespace-nowrap">終了する &gt;</button>
+                            <button onClick={() => confirmAction('受検を終了しますか？(後戻りできません)', handleFinish)} className="border border-gray-400 text-gray-700 px-2 py-0.5 md:px-3 md:py-1 text-[10px] md:text-xs hover:bg-gray-100 whitespace-nowrap">受検を終了する &gt;</button>
                         </div>
                         <div className="flex items-end">
                             <span className="text-[10px] md:text-sm text-gray-600 mr-1 mb-1">残り</span>
@@ -543,7 +543,7 @@
                                 {/* Answer Line: スマホではフレックス折り返しを許容しレイアウトを調整 */}
                                 <div className="flex flex-row items-stretch space-x-2 max-w-4xl mx-auto h-12 md:h-14">
                                     <button onClick={() => toggleBookmark(currentQ.id)} className={`flex flex-col items-center justify-center px-1 md:p-2 w-10 md:w-14 shrink-0 ${bookmarks[currentQ.id] ? 'bg-red-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'} transition-colors rounded-sm`}>
-                                        <div className="text-[8px] md:text-[9px] mb-0.5 whitespace-nowrap">後で</div>
+                                        <div className="text-[8px] md:text-[9px] mb-0.5 whitespace-nowrap">後で確認</div>
                                         <i className={`fas fa-bookmark text-sm md:text-xl ${bookmarks[currentQ.id] ? 'text-white' : 'text-gray-400'}`}></i>
                                     </button>
                                     
@@ -571,7 +571,7 @@
                                     </div>
                                 </div>
                                 <div className="md:hidden mt-1 text-center">
-                                    <button onClick={() => setIsMenuOpen(true)} className="text-[10px] font-bold flex items-center justify-center w-full py-1 bg-white border shadow-sm text-gray-500"><i className="fas fa-list-ol mr-1"></i> 一覧</button>
+                                    <button onClick={() => setIsMenuOpen(true)} className="text-[10px] font-bold flex items-center justify-center w-full py-1 bg-white border shadow-sm text-gray-500"><i className="fas fa-list-ol mr-1"></i> 問題一覧を見る</button>
                                 </div>
                             </div>
                         </div>
