@@ -61,6 +61,8 @@
 
         // --- Constants ---
         const TIME_LIMIT_MINUTES = 60;
+        // 対応する拡張子のリスト（優先順位順）
+        const FILE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.jfif', '.gif'];
 
         // --- Helper: Circled Numbers ---
         const getCircledNumber = (index) => {
@@ -86,25 +88,68 @@
             );
         };
 
-        const AsyncImage = ({ src, alt, className, fallback }) => {
+        // src (単一パス) または srcs (パスの配列) を受け取り、ロード可能な最初の画像を表示するコンポーネント
+        const AsyncImage = ({ src, srcs, alt, className, fallback }) => {
+            const [loadedSrc, setLoadedSrc] = useState(null);
             const [loading, setLoading] = useState(true);
             const [error, setError] = useState(false);
 
             useEffect(() => {
                 setLoading(true);
                 setError(false);
-                const img = new Image();
-                img.src = src;
-                img.onload = () => setLoading(false);
-                img.onerror = () => { setLoading(false); setError(true); };
-            }, [src]);
+                setLoadedSrc(null);
+
+                // 配列化して候補リストを作成
+                const candidates = srcs || (src ? [src] : []);
+                
+                if (candidates.length === 0) {
+                    setError(true);
+                    setLoading(false);
+                    return;
+                }
+
+                let isMounted = true;
+                let attemptIndex = 0;
+
+                const loadNext = () => {
+                    if (attemptIndex >= candidates.length) {
+                        if (isMounted) {
+                            setError(true);
+                            setLoading(false);
+                        }
+                        return;
+                    }
+
+                    const img = new Image();
+                    const currentCandidate = candidates[attemptIndex];
+                    img.src = currentCandidate;
+                    
+                    img.onload = () => {
+                        if (isMounted) {
+                            setLoadedSrc(currentCandidate);
+                            setLoading(false);
+                        }
+                    };
+                    
+                    img.onerror = () => {
+                        if (isMounted) {
+                            attemptIndex++;
+                            loadNext(); // 次の候補を試す
+                        }
+                    };
+                };
+
+                loadNext();
+
+                return () => { isMounted = false; };
+            }, [src, srcs]); // src または srcs が変更されたら再実行
 
             if (error) return fallback || <div className="flex flex-col items-center text-gray-400 p-2 justify-center h-full bg-white border"><i className="fas fa-image text-2xl mb-1"></i><span className="text-[10px] mt-1">No Image</span></div>;
 
             return (
                 <div className="relative w-full h-full flex items-center justify-center overflow-hidden bg-white">
                     {loading && <div className="absolute inset-0 flex items-center justify-center bg-gray-50 text-gray-400 font-bold text-xs z-0 font-number">Loading...</div>}
-                    <img src={src} alt={alt} className={`${className} ${loading ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`} />
+                    <img src={loadedSrc} alt={alt} className={`${className} ${loading ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`} />
                 </div>
             );
         };
@@ -118,7 +163,7 @@
                     <div className="max-w-4xl w-full bg-white p-8 space-y-8 shadow-xl rounded-lg">
                         <div className="border-b-2 border-red-600 pb-4 mb-8 flex justify-between items-end">
                             <div className="h-12">
-                                {/* ロゴ画像: 存在しない場合はaltテキスト表示 */}
+                                {/* ロゴ画像 */}
                                 <img src="deco/logo.png" alt="ロゴ" className="h-full object-contain" onError={(e) => e.target.style.display = 'none'} />
                             </div>
                             <div className="text-sm text-gray-500">ユーザーネーム: {handleName || "未入力"}</div>
@@ -439,7 +484,8 @@
                                     {currentQIndex > 0 && <button onClick={() => navigate('prev')} className="absolute left-0 top-1/2 -translate-y-1/2 z-30 bg-white/50 hover:bg-white rounded-full p-2 text-gray-600 shadow-lg transform -translate-x-1/2 md:translate-x-0 w-16 h-16 flex items-center justify-center"><i className="fas fa-chevron-left text-3xl"></i><div className="absolute -bottom-4 text-xs text-center font-number bg-white/80 px-1 rounded">{String(currentQIndex).padStart(2,'0')}</div></button>}
                                     {currentQIndex < config.length - 1 && <button onClick={() => navigate('next')} className="absolute right-0 top-1/2 -translate-y-1/2 z-30 bg-white/50 hover:bg-white rounded-full p-2 text-gray-600 shadow-lg transform translate-x-1/2 md:translate-x-0 w-16 h-16 flex items-center justify-center"><i className="fas fa-chevron-right text-3xl"></i><div className="absolute -bottom-4 text-xs text-center font-number bg-white/80 px-1 rounded">{String(currentQIndex + 2).padStart(2,'0')}</div></button>}
                                     <div className="relative w-full h-full select-none flex items-center justify-center bg-white shadow-lg">
-                                        <AsyncImage src={currentQ.imagePath} alt={`Problem ${currentQ.id}`} className="max-w-full max-h-full object-contain pointer-events-none" fallback={<div className="absolute inset-0 w-full h-full bg-gray-50 flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-300 flex"><i className="fas fa-image text-4xl mb-2"></i><span className="text-xl font-bold text-gray-500">問題 {currentQ.id}</span><span className="text-xs mt-2">画像を配置してください: {currentQ.imagePath}</span></div>} />
+                                        {/* 修正箇所: 画像パスの配列を渡す */}
+                                        <AsyncImage srcs={currentQ.imageSrcs} alt={`Problem ${currentQ.id}`} className="max-w-full max-h-full object-contain pointer-events-none" fallback={<div className="absolute inset-0 w-full h-full bg-gray-50 flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-300 flex"><i className="fas fa-image text-4xl mb-2"></i><span className="text-xl font-bold text-gray-500">問題 {currentQ.id}</span><span className="text-xs mt-2">画像を配置してください</span></div>} />
                                         <div className="absolute inset-0 w-full h-full"><CanvasLayer drawings={drawings[currentQ.id] || []} onDrawEnd={handleDrawEnd} tool={tool} color={color} isVisible={isToolbarVisible} /></div>
                                     </div>
                                 </div>
@@ -522,7 +568,7 @@
         };
 
         const FinishScreen = ({ userAnswers, onRestart, config }) => {
-            const [explanationImage, setExplanationImage] = useState(null);
+            const [explanationImageSrcs, setExplanationImageSrcs] = useState(null); // 配列を受け取るように変更
             const results = useMemo(() => {
                 let totalScore = 0;
                 const grading = config.map(q => {
@@ -560,7 +606,7 @@
                     }
 
                     if (isCorrect) totalScore += q.points;
-                    return { id: q.id, userAns: displayUserAns, correctAns: displayCorrectAns, isCorrect, explanationPath: q.explanationPath };
+                    return { id: q.id, userAns: displayUserAns, correctAns: displayCorrectAns, isCorrect, explanationSrcs: q.explanationSrcs };
                 });
                 return { grading, totalScore };
             }, [userAnswers, config]);
@@ -593,7 +639,7 @@
                                                 {row.isCorrect ? <i className="fas fa-check-circle text-green-500 text-2xl"></i> : <i className="fas fa-times-circle text-red-500 text-2xl"></i>}
                                             </td>
                                             <td className="p-3 text-center">
-                                                <button onClick={() => setExplanationImage(row.explanationPath)} className="text-gray-600 hover:text-red-600 transition-colors flex items-center justify-center w-full">
+                                                <button onClick={() => setExplanationImageSrcs(row.explanationSrcs)} className="text-gray-600 hover:text-red-600 transition-colors flex items-center justify-center w-full">
                                                     <i className="fas fa-book-open mr-1"></i> <span className="text-sm hidden sm:inline">解説</span>
                                                 </button>
                                             </td>
@@ -606,12 +652,12 @@
                              <button onClick={onRestart} className="bg-red-600 text-white font-bold text-lg py-4 px-12 hover:bg-red-700 shadow-lg transition-transform hover:scale-105">トップページに戻る</button>
                         </div>
                     </div>
-                    {explanationImage && (
-                        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 animate-fade-in cursor-pointer" onClick={() => setExplanationImage(null)}>
+                    {explanationImageSrcs && (
+                        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 animate-fade-in cursor-pointer" onClick={() => setExplanationImageSrcs(null)}>
                             <div className="relative max-w-4xl max-h-full bg-white p-1 rounded shadow-xl cursor-default" onClick={e => e.stopPropagation()}>
-                                <button onClick={() => setExplanationImage(null)} className="absolute -top-10 right-0 text-white hover:text-gray-300"><i className="fas fa-times text-3xl"></i></button>
+                                <button onClick={() => setExplanationImageSrcs(null)} className="absolute -top-10 right-0 text-white hover:text-gray-300"><i className="fas fa-times text-3xl"></i></button>
                                 <div className="overflow-auto max-h-[85vh]">
-                                    <AsyncImage src={explanationImage} alt="解説" className="max-w-full h-auto" fallback={<div className="p-8 text-center text-gray-500"><p>解説画像が見つかりませんでした。</p><p className="text-xs mt-2">{explanationImage}</p></div>} />
+                                    <AsyncImage srcs={explanationImageSrcs} alt="解説" className="max-w-full h-auto" fallback={<div className="p-8 text-center text-gray-500"><p>解説画像が見つかりませんでした。</p></div>} />
                                 </div>
                             </div>
                         </div>
@@ -645,7 +691,8 @@
 
                         {/* 右側全体: 画像 (Rowspan 2) */}
                         <div className="col-start-2 row-start-1 row-end-3 w-16 h-full bg-white border border-gray-200 flex items-center justify-center overflow-hidden self-center">
-                             <AsyncImage src={q.imagePath} className="w-full h-full object-cover" />
+                             {/* 修正箇所: 画像パスの配列を渡す */}
+                             <AsyncImage srcs={q.imageSrcs} className="w-full h-full object-cover" />
                         </div>
 
                         {/* 下段左: しおりと解答 (gapで重なり回避) */}
@@ -665,7 +712,6 @@
             const [userName, setUserName] = useState("");
             const [finalAnswers, setFinalAnswers] = useState({});
             const [config, setConfig] = useState([]);
-            // 【修正箇所】 初期値を false に変更
             const [loading, setLoading] = useState(false);
 
             // Function to load config for a specific riddle
@@ -708,11 +754,20 @@
                         
                         const qId = i + 1;
                         const isSelection = !!selectionMap[qId];
+
+                        // パスのベースを作成（拡張子なし）
+                        const qNum = String(qId).padStart(2, '0');
+                        const imgBase = `riddle/riddle${riddleId}/riddle${riddleId}_${qNum}`;
+                        const ansBase = `riddle/riddle${riddleId}/answer_${qNum}`;
+                        
+                        // 拡張子のリストを元にパス候補配列を生成
+                        const imageSrcs = FILE_EXTENSIONS.map(ext => imgBase + ext);
+                        const explanationSrcs = FILE_EXTENSIONS.map(ext => ansBase + ext);
                         
                         tempConfig.push({
                             id: qId,
-                            imagePath: `riddle/riddle${riddleId}/riddle${riddleId}_${String(qId).padStart(2, '0')}.png`,
-                            explanationPath: `riddle/riddle${riddleId}/answer_${String(qId).padStart(2, '0')}.jfif`,
+                            imageSrcs: imageSrcs,          // 配列で保持
+                            explanationSrcs: explanationSrcs, // 配列で保持
                             points: points,
                             type: isSelection ? 'choice' : 'text',
                             options: selectionMap[qId] || [],
