@@ -118,7 +118,8 @@
                     <div className="max-w-4xl w-full bg-white p-8 space-y-8 shadow-xl rounded-lg">
                         <div className="border-b-2 border-red-600 pb-4 mb-8 flex justify-between items-end">
                             <div className="h-12">
-                                <img src="deco/logo.png" alt="ロゴ" className="h-full object-contain" />
+                                {/* ロゴ画像: 存在しない場合はaltテキスト表示 */}
+                                <img src="deco/logo.png" alt="ロゴ" className="h-full object-contain" onError={(e) => e.target.style.display = 'none'} />
                             </div>
                             <div className="text-sm text-gray-500">ユーザーネーム: {handleName || "未入力"}</div>
                         </div>
@@ -664,7 +665,8 @@
             const [userName, setUserName] = useState("");
             const [finalAnswers, setFinalAnswers] = useState({});
             const [config, setConfig] = useState([]);
-            const [loading, setLoading] = useState(true);
+            // 【修正箇所】 初期値を false に変更
+            const [loading, setLoading] = useState(false);
 
             // Function to load config for a specific riddle
             const loadRiddleData = async (riddleId) => {
