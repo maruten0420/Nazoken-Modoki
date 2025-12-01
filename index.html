@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>謎検もどき</title>
+    <title>謎解き能力検定 2025秋</title>
     
     <!-- React & ReactDOM -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -536,7 +536,9 @@
                         } else {
                             displayUserAns = "未回答";
                         }
+                        // CSV answer handling
                         const correctStr = q.primaryAnswer || ""; 
+                        
                         const hasCircle = /^[\u2460-\u2469]/.test(correctStr);
                         if (hasCircle) {
                             displayCorrectAns = correctStr;
