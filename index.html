@@ -248,7 +248,8 @@
                 ctx.setTransform(1, 0, 0, 1, 0, 0);
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 ctx.restore();
-                if (!isVisible) return;
+                // 修正箇所：isVisibleに関わらず描画内容は常に表示する（下のif文を削除）
+                // if (!isVisible) return; 
                 drawings.forEach(stroke => drawStroke(ctx, stroke));
             };
 
@@ -509,7 +510,8 @@
                                     </div>
                                 </div>
                                 <div className="flex items-center space-x-2 md:space-x-4 max-w-4xl mx-auto">
-                                    <button onClick={() => toggleBookmark(currentQ.id)} className={`flex flex-col items-center justify-center p-2 w-14 h-14 ${bookmarks[currentQ.id] ? 'bg-gray-800 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'} transition-colors rounded-sm`}>
+                                    {/* 修正箇所：ブックマークONのとき背景を赤色に変更 */}
+                                    <button onClick={() => toggleBookmark(currentQ.id)} className={`flex flex-col items-center justify-center p-2 w-14 h-14 ${bookmarks[currentQ.id] ? 'bg-red-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'} transition-colors rounded-sm`}>
                                         <div className="text-[9px] mb-0.5 whitespace-nowrap">後で解く</div>
                                         <i className={`fas fa-bookmark text-xl ${bookmarks[currentQ.id] ? 'text-white' : 'text-gray-400'}`}></i>
                                     </button>
