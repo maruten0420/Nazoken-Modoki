@@ -25,7 +25,7 @@
             user-select: none; 
             touch-action: none; 
             overflow: hidden;
-            background-color: #fff; /* 枠外の背景色 */
+            background-color: #ffffff; /* 枠外の背景色 */
         }
 
         .font-number {
@@ -181,6 +181,36 @@
         const StartScreen = ({ onStart, initialName }) => {
             const [handleName, setHandleName] = useState(initialName || "");
             const [selectedRiddle, setSelectedRiddle] = useState(1);
+            const [riddleInfo, setRiddleInfo] = useState({ creator: '...', count: '...', limit: '...' });
+
+            // 選択された問題セットの情報をCSVから取得する
+            useEffect(() => {
+                const fetchRiddleInfo = async () => {
+                    setRiddleInfo({ creator: '読み込み中...', count: '...', limit: '...' });
+                    try {
+                        const csvPath = `riddle/riddle${selectedRiddle}/riddle${selectedRiddle}.csv`;
+                        const response = await fetch(csvPath);
+                        if (!response.ok) throw new Error('Not found');
+                        const buffer = await response.arrayBuffer();
+                        const decoder = new TextDecoder('utf-8');
+                        const text = decoder.decode(buffer);
+                        const firstLine = text.split(/\r\n|\n/)[0];
+                        if (!firstLine) throw new Error('Empty');
+                        
+                        // 1行目: 問題数, 選択肢数, 制限時間, 制作者
+                        const [count, , limit, creator] = firstLine.split(',');
+                        
+                        setRiddleInfo({
+                            count: count ? `${count}問` : '不明',
+                            limit: limit ? `${limit}分` : '不明',
+                            creator: creator ? creator.trim() : '不明'
+                        });
+                    } catch (e) {
+                        setRiddleInfo({ creator: '不明', count: '不明', limit: '不明' });
+                    }
+                };
+                fetchRiddleInfo();
+            }, [selectedRiddle]);
 
             return (
                 <div className="flex flex-col items-center justify-center h-full p-4 overflow-y-auto relative z-20">
@@ -198,7 +228,7 @@
                             </div>
                             <div className="bg-gray-50 p-4 md:p-6 rounded border border-gray-200">
                                 <label className="block text-gray-700 font-bold mb-4 text-sm md:text-base">問題セット選択</label>
-                                <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4">
+                                <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4 mb-4">
                                     <button 
                                         onClick={() => setSelectedRiddle(1)}
                                         className={`border-2 font-bold py-2 md:py-3 px-2 md:px-4 rounded shadow-sm font-number transition-colors text-sm md:text-base ${selectedRiddle === 1 ? 'bg-red-600 border-red-600 text-white' : 'bg-red-50 border-red-500 text-red-700'}`}
@@ -217,9 +247,15 @@
                                         <button key={num} disabled className="bg-gray-200 text-gray-400 font-bold py-2 md:py-3 px-2 md:px-4 rounded cursor-not-allowed font-number text-sm md:text-base">riddle{num}</button>
                                     ))}
                                 </div>
+                                {/* 制作者情報表示エリア */}
+                                <div className="text-sm md:text-base text-gray-700 bg-white p-3 rounded border border-gray-300 flex flex-wrap gap-4 items-center">
+                                    <div className="flex items-center"><i className="fas fa-user-edit text-gray-400 mr-2"></i><span className="font-bold mr-1">制作者:</span> {riddleInfo.creator}</div>
+                                    <div className="flex items-center"><i className="fas fa-list-ol text-gray-400 mr-2"></i><span className="font-bold mr-1">問題数:</span> {riddleInfo.count}</div>
+                                    <div className="flex items-center"><i className="fas fa-stopwatch text-gray-400 mr-2"></i><span className="font-bold mr-1">制限時間:</span> {riddleInfo.limit}</div>
+                                </div>
                             </div>
                         </div>
-                        <div className="flex justify-center mt-8 md:mt-12">
+                        <div className="flex flex-col items-center justify-center mt-8 md:mt-12 space-y-4">
                             <button 
                                 onClick={() => handleName && onStart(handleName, selectedRiddle)} 
                                 disabled={!handleName} 
@@ -227,6 +263,10 @@
                             >
                                 模試を受ける
                             </button>
+                            <div className="text-xs text-gray-500 text-center leading-relaxed">
+                                <p>・このサイトは本家謎検の挙動とは異なることがあります。</p>
+                                <p>・このサイトはSCRAPさん、および本家謎検とは一切関係ございません。</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -454,13 +494,10 @@
                 setRedoStack(prev => { const next = { ...prev }; delete next[currentQ.id]; return next; });
             }, [currentQ.id]);
 
-            // 【Undo機能修正】
             const undo = () => {
                 setDrawings(prev => {
                     const qDrawings = prev[currentQ.id] || [];
-                    
-                    if (qDrawings.length === 0) return prev; // 修正: 正しい条件式
-
+                    if (qDrawings.length === 0) return prev; // 修正済みの条件式
                     const last = qDrawings[qDrawings.length - 1];
                     const remaining = qDrawings.slice(0, -1);
                     setRedoStack(rPrev => ({ ...rPrev, [currentQ.id]: [...(rPrev[currentQ.id] || []), last] }));
@@ -468,7 +505,6 @@
                 });
             };
 
-            // 【Redo機能】 (前回修正済みですが念のため維持)
             const redo = () => {
                 setRedoStack(prev => {
                     const qRedos = prev[currentQ.id] || [];
@@ -612,7 +648,7 @@
             );
         };
 
-        const FinishScreen = ({ userAnswers, onRestart, config }) => {
+        const FinishScreen = ({ userAnswers, onRestart, config, riddleId }) => {
             const [explanationImageSrcs, setExplanationImageSrcs] = useState(null);
             const results = useMemo(() => {
                 let totalScore = 0;
@@ -655,6 +691,12 @@
                 return { grading, totalScore };
             }, [userAnswers, config]);
 
+            const shareOnX = () => {
+                const text = `riddle${riddleId}で${results.totalScore}点を獲得しました！\nあなたも謎を解いてみよう\nhttps://maruten0420.github.io/Nazoken-Modoki/`;
+                const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
+                window.open(url, '_blank');
+            };
+
             return (
                 <div className="flex flex-col h-full font-sans overflow-hidden relative z-20">
                      <div className="border-b-2 border-red-600 p-4 flex justify-between items-center bg-white shrink-0">
@@ -692,8 +734,11 @@
                                 </tbody>
                             </table>
                         </div>
-                        <div className="flex justify-center mt-8 pb-8">
+                        <div className="flex flex-col items-center justify-center mt-8 pb-8 space-y-4">
                              <button onClick={onRestart} className="bg-red-600 text-white font-bold text-lg py-4 px-12 hover:bg-red-700 shadow-lg transition-transform hover:scale-105">トップページに戻る</button>
+                             <button onClick={shareOnX} className="bg-black text-white font-bold text-lg py-3 px-10 rounded-full hover:bg-gray-800 shadow-lg transition-transform hover:scale-105 flex items-center">
+                                <i className="fab fa-x-twitter mr-2 text-xl"></i> Xで結果報告！
+                             </button>
                         </div>
                     </div>
                     {explanationImageSrcs && (
@@ -761,6 +806,9 @@
             
             // 【修正4】 制限時間管理用の state を追加
             const [timeLimit, setTimeLimit] = useState(60);
+            
+            // 【修正8】 現在の問題セットIDを管理
+            const [currentRiddleId, setCurrentRiddleId] = useState(1);
 
             // Function to load config for a specific riddle
             const loadRiddleData = async (riddleId) => {
@@ -839,6 +887,7 @@
 
             const startExam = (name, riddleId) => {
                 setUserName(name);
+                setCurrentRiddleId(riddleId); // RiddleIDを保存
                 loadRiddleData(riddleId);
             };
 
@@ -862,7 +911,7 @@
                     {/* 【修正7】 ExamScreen に timeLimit を渡す */}
                     {screen === 'exam' && <ExamScreen userName={userName} onFinish={finishExam} config={config} timeLimit={timeLimit} />}
                     
-                    {screen === 'finish' && <FinishScreen userAnswers={finalAnswers} onRestart={restart} config={config} />}
+                    {screen === 'finish' && <FinishScreen userAnswers={finalAnswers} onRestart={restart} config={config} riddleId={currentRiddleId} />}
                 </div>
             );
         };
