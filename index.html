@@ -63,7 +63,6 @@
         const { useState, useEffect, useRef, useMemo, forwardRef, useCallback } = React;
 
         // --- Constants ---
-        const TIME_LIMIT_MINUTES = 60;
         const FILE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.jfif', '.gif'];
 
         // --- Custom Hook: Viewport Height ---
@@ -359,12 +358,16 @@
             );
         };
 
-        const ExamScreen = ({ userName, onFinish, config }) => {
+        // 【修正1】 ExamScreenコンポーネントの修正（引数の追加と制限時間の適用）
+        const ExamScreen = ({ userName, onFinish, config, timeLimit }) => {
             const [currentQIndex, setCurrentQIndex] = useState(0);
             const [answers, setAnswers] = useState({});
             const [lockedAnswers, setLockedAnswers] = useState({});
             const [bookmarks, setBookmarks] = useState({});
-            const [timeLeft, setTimeLeft] = useState(TIME_LIMIT_MINUTES * 60);
+            
+            // 【修正2】 TIME_LIMIT_MINUTES定数ではなく、propsの timeLimit を使用 (なければデフォルト60分)
+            const [timeLeft, setTimeLeft] = useState((timeLimit || 60) * 60);
+
             const [isMenuOpen, setIsMenuOpen] = useState(false);
             const [drawings, setDrawings] = useState({});
             const [redoStack, setRedoStack] = useState({});
@@ -458,22 +461,31 @@
             const undo = () => {
                 setDrawings(prev => {
                     const qDrawings = prev[currentQ.id] || [];
-                    if (qDrawings.length === 0) return prev;
+                    if (qRedos => qDrawings.length === 0) return prev;
                     const last = qDrawings[qDrawings.length - 1];
                     const remaining = qDrawings.slice(0, -1);
                     setRedoStack(rPrev => ({ ...rPrev, [currentQ.id]: [...(rPrev[currentQ.id] || []), last] }));
                     return { ...prev, [currentQ.id]: remaining };
                 });
             };
+
+            // 2. Redo機能のバグ修正
             const redo = () => {
                 setRedoStack(prev => {
                     const qRedos = prev[currentQ.id] || [];
                     if (qRedos.length === 0) return prev;
                     const toRestore = qRedos[qRedos.length - 1];
+
+                    // 【修正3】 ここに remaining の定義を追加
+                    const remaining = qRedos.slice(0, -1);
+
                     setDrawings(dPrev => ({ ...dPrev, [currentQ.id]: [...(dPrev[currentQ.id] || []), toRestore] }));
-                    return { ...prev, [currentQ.id]: remaining };
+                    
+                    // 修正前: return { ...prev, [currentQ.id]: remaining }; (remaining未定義エラー)
+                    return { ...prev, [currentQ.id]: remaining }; 
                 });
             };
+
             const clearAll = () => { setDrawings(prev => ({ ...prev, [currentQ.id]: [] })); setRedoStack(prev => { const next = {...prev}; delete next[currentQ.id]; return next; }); };
 
             if (isTimeUp) {
@@ -744,13 +756,17 @@
             );
         });
 
+        // 3. Appコンポーネントの修正（CSV読み込み処理）
         const App = () => {
             const [screen, setScreen] = useState('start');
             const [userName, setUserName] = useState("");
             const [finalAnswers, setFinalAnswers] = useState({});
             const [config, setConfig] = useState([]);
             const [loading, setLoading] = useState(false);
-            const viewportHeight = useViewportHeight(); // カスタムフックを使用
+            const viewportHeight = useViewportHeight();
+            
+            // 【修正4】 制限時間管理用の state を追加
+            const [timeLimit, setTimeLimit] = useState(60);
 
             // Function to load config for a specific riddle
             const loadRiddleData = async (riddleId) => {
@@ -766,9 +782,14 @@
                     const lines = text.split(/\r\n|\n/).filter(line => line.trim() !== '');
                     if (lines.length < 1) throw new Error('Empty CSV');
 
-                    const [totalStr, selCountStr] = lines[0].split(',');
+                    // 【修正5】 1行目3列目から制限時間を取得するように変更
+                    const [totalStr, selCountStr, timeLimitStr] = lines[0].split(',');
                     const totalQuestions = parseInt(totalStr, 10);
                     const selectionCount = parseInt(selCountStr, 10);
+
+                    // 【修正6】 取得した制限時間を state にセット（数値変換、不正値なら60分）
+                    const parsedLimit = parseInt(timeLimitStr, 10);
+                    setTimeLimit(!isNaN(parsedLimit) && parsedLimit > 0 ? parsedLimit : 60);
 
                     const selectionMap = {};
                     for (let i = 1; i <= selectionCount; i++) {
@@ -843,7 +864,10 @@
                     <div style={{ position: 'absolute', inset: 0, zIndex: -1, backgroundImage: "url('deco/back.png')", backgroundRepeat: 'repeat', backgroundPosition: 'center', opacity: 0.5 }}></div>
 
                     {screen === 'start' && <StartScreen onStart={startExam} initialName={userName} />}
-                    {screen === 'exam' && <ExamScreen userName={userName} onFinish={finishExam} config={config} />}
+                    
+                    {/* 【修正7】 ExamScreen に timeLimit を渡す */}
+                    {screen === 'exam' && <ExamScreen userName={userName} onFinish={finishExam} config={config} timeLimit={timeLimit} />}
+                    
                     {screen === 'finish' && <FinishScreen userAnswers={finalAnswers} onRestart={restart} config={config} />}
                 </div>
             );
