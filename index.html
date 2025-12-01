@@ -697,112 +697,114 @@
         };
 
         const FinishScreen = ({ userAnswers, onRestart, config, riddleId }) => {
-            const [explanationImageSrcs, setExplanationImageSrcs] = useState(null);
-            const results = useMemo(() => {
-                let totalScore = 0;
-                const grading = config.map(q => {
-                    const userAns = userAnswers[q.id];
-                    let isCorrect = false;
-                    let displayUserAns = "-";
-                    let displayCorrectAns = "-";
-                    
-                    if (q.type === 'choice') {
-                        if (userAns !== undefined) {
-                            displayUserAns = `${getCircledNumber(userAns)}${q.options[userAns]}`;
-                        } else {
-                            displayUserAns = "未回答";
-                        }
-                        const correctStr = q.primaryAnswer || ""; 
-                        const hasCircle = /^[\u2460-\u2469]/.test(correctStr);
-                        if (hasCircle) {
-                            displayCorrectAns = correctStr;
-                        } else {
-                            const correctIndex = q.options.findIndex(opt => opt === correctStr);
-                            if (correctIndex !== -1) {
-                                displayCorrectAns = `${getCircledNumber(correctIndex)}${q.options[correctIndex]}`;
-                            } else {
-                                displayCorrectAns = correctStr;
-                            }
-                        }
-                        const userAnsText = userAns !== undefined ? q.options[userAns] : "";
-                        const userAnsFull = userAns !== undefined ? `${getCircledNumber(userAns)}${q.options[userAns]}` : "";
-                        isCorrect = q.correctAnswerList.some(ans => ans === userAnsText || ans === userAnsFull);
+        const [explanationImageSrcs, setExplanationImageSrcs] = useState(null);
+        const results = useMemo(() => {
+            let totalScore = 0;
+            const grading = config.map(q => {
+                const userAns = userAnswers[q.id];
+                let isCorrect = false;
+                let displayUserAns = "-";
+                let displayCorrectAns = "-";
+                
+                if (q.type === 'choice') {
+                    if (userAns !== undefined) {
+                        displayUserAns = `${getCircledNumber(userAns)}${q.options[userAns]}`;
                     } else {
-                        displayUserAns = userAns || "未回答";
-                        displayCorrectAns = q.primaryAnswer || "";
-                        isCorrect = q.correctAnswerList.includes(userAns);
+                        displayUserAns = "未回答";
                     }
+                    const correctStr = q.primaryAnswer || ""; 
+                    const hasCircle = /^[\u2460-\u2469]/.test(correctStr);
+                    if (hasCircle) {
+                        displayCorrectAns = correctStr;
+                    } else {
+                        const correctIndex = q.options.findIndex(opt => opt === correctStr);
+                        if (correctIndex !== -1) {
+                            displayCorrectAns = `${getCircledNumber(correctIndex)}${q.options[correctIndex]}`;
+                        } else {
+                            displayCorrectAns = correctStr;
+                        }
+                    }
+                    const userAnsText = userAns !== undefined ? q.options[userAns] : "";
+                    const userAnsFull = userAns !== undefined ? `${getCircledNumber(userAns)}${q.options[userAns]}` : "";
+                    isCorrect = q.correctAnswerList.some(ans => ans === userAnsText || ans === userAnsFull);
+                } else {
+                    displayUserAns = userAns || "未回答";
+                    displayCorrectAns = q.primaryAnswer || "";
+                    isCorrect = q.correctAnswerList.includes(userAns);
+                }
 
-                    if (isCorrect) totalScore += q.points;
-                    return { id: q.id, userAns: displayUserAns, correctAns: displayCorrectAns, isCorrect, explanationSrcs: q.explanationSrcs };
-                });
-                return { grading, totalScore };
-            }, [userAnswers, config]);
+                if (isCorrect) totalScore += q.points;
+                return { id: q.id, userAns: displayUserAns, correctAns: displayCorrectAns, isCorrect, explanationSrcs: q.explanationSrcs };
+            });
+            return { grading, totalScore };
+        }, [userAnswers, config]);
 
-            const shareOnX = () => {
-                const text = `riddle${riddleId}で${results.totalScore}点を獲得しました！\nあなたも謎を解いてみよう\nhttps://maruten0420.github.io/Nazoken-Modoki/`;
-                const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
-                window.open(url, '_blank');
-            };
+        const shareOnX = () => {
+            const text = `riddle${riddleId}で${results.totalScore}点を獲得しました！\nあなたも謎を解いてみよう\nhttps://maruten0420.github.io/Nazoken-Modoki/`;
+            const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
+            window.open(url, '_blank');
+        };
 
-            return (
-                <div className="flex flex-col h-full font-sans overflow-hidden relative z-20">
-                     <div className="border-b-2 border-red-600 p-4 flex justify-between items-center bg-white shrink-0">
-                        <h1 className="text-xl md:text-2xl font-bold text-red-600">受検結果</h1>
-                        <div className="text-lg md:text-xl font-bold">合計得点: <span className="text-2xl md:text-3xl text-red-600 font-number">{results.totalScore}</span> / 100点</div>
-                    </div>
-                    <div className="flex-1 overflow-y-auto p-2 md:p-8">
-                        <div className="max-w-5xl mx-auto bg-white shadow rounded-lg overflow-hidden">
-                            <table className="w-full text-left border-collapse text-sm md:text-base">
-                                <thead className="bg-gray-100 border-b border-gray-300">
-                                    <tr>
-                                        <th className="p-2 md:p-3 text-center w-10 md:w-16">No.</th>
-                                        <th className="p-2 md:p-3 w-1/4">正解</th>
-                                        <th className="p-2 md:p-3 w-1/4">あなたの答え</th>
-                                        <th className="p-2 md:p-3 text-center w-10 md:w-16">判定</th>
-                                        <th className="p-2 md:p-3 text-center w-16 md:w-24">解説</th>
+        return (
+            <div className="flex flex-col h-full font-sans overflow-hidden relative z-20">
+                    <div className="border-b-2 border-red-600 p-4 flex justify-between items-center bg-white shrink-0">
+                    <h1 className="text-xl md:text-2xl font-bold text-red-600">受検結果</h1>
+                    <div className="text-lg md:text-xl font-bold">合計得点: <span className="text-2xl md:text-3xl text-red-600 font-number">{results.totalScore}</span> / 100点</div>
+                </div>
+                <div className="flex-1 overflow-y-auto p-2 md:p-8">
+                    <div className="max-w-5xl mx-auto bg-white shadow rounded-lg overflow-hidden">
+                        <table className="w-full text-left border-collapse text-sm md:text-base">
+                            <thead className="bg-gray-100 border-b border-gray-300">
+                                <tr>
+                                    <th className="p-2 md:p-3 text-center w-10 md:w-16">No.</th>
+                                    <th className="p-2 md:p-3 w-1/4">正解</th>
+                                    <th className="p-2 md:p-3 w-1/4">あなたの答え</th>
+                                    <th className="p-2 md:p-3 text-center w-10 md:w-16">判定</th>
+                                    <th className="p-2 md:p-3 text-center w-16 md:w-24">解説</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {results.grading.map((row) => (
+                                    <tr key={row.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                        <td className="p-2 md:p-3 text-center font-bold text-gray-700 font-number">{row.id}</td>
+                                        <td className="p-2 md:p-3 text-green-700 font-medium break-all">{row.correctAns}</td>
+                                        <td className="p-2 md:p-3 text-gray-800 break-all">{row.userAns}</td>
+                                        <td className="p-2 md:p-3 text-center">
+                                            {row.isCorrect ? <i className="fas fa-check-circle text-green-500 text-xl md:text-2xl"></i> : <i className="fas fa-times-circle text-red-500 text-xl md:text-2xl"></i>}
+                                        </td>
+                                        <td className="p-2 md:p-3 text-center">
+                                            <button onClick={() => setExplanationImageSrcs(row.explanationSrcs)} className="text-gray-600 hover:text-red-600 transition-colors flex items-center justify-center w-full">
+                                                <i className="fas fa-book-open mr-1"></i> <span className="hidden sm:inline">解説</span>
+                                            </button>
+                                        </td>
                                     </tr>
-                                </thead>
-                                <tbody>
-                                    {results.grading.map((row) => (
-                                        <tr key={row.id} className="border-b border-gray-200 hover:bg-gray-50">
-                                            <td className="p-2 md:p-3 text-center font-bold text-gray-700 font-number">{row.id}</td>
-                                            <td className="p-2 md:p-3 text-green-700 font-medium break-all">{row.correctAns}</td>
-                                            <td className="p-2 md:p-3 text-gray-800 break-all">{row.userAns}</td>
-                                            <td className="p-2 md:p-3 text-center">
-                                                {row.isCorrect ? <i className="fas fa-check-circle text-green-500 text-xl md:text-2xl"></i> : <i className="fas fa-times-circle text-red-500 text-xl md:text-2xl"></i>}
-                                            </td>
-                                            <td className="p-2 md:p-3 text-center">
-                                                <button onClick={() => setExplanationImageSrcs(row.explanationSrcs)} className="text-gray-600 hover:text-red-600 transition-colors flex items-center justify-center w-full">
-                                                    <i className="fas fa-book-open mr-1"></i> <span className="hidden sm:inline">解説</span>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                        <div className="flex flex-col items-center justify-center mt-8 pb-8 space-y-4">
-                             <button onClick={onRestart} className="bg-red-600 text-white font-bold text-lg py-4 px-12 hover:bg-red-700 shadow-lg transition-transform hover:scale-105">トップページに戻る</button>
-                             <button onClick={shareOnX} className="bg-black text-white font-bold text-lg py-3 px-10 rounded-full hover:bg-gray-800 shadow-lg transition-transform hover:scale-105 flex items-center">
-                                {/* 修正: 文字 'X' をユニコードの '𝕏' に変更 */}
-                                <i className="fab fa-x-twitter mr-2 text-xl"></i> 𝕏で結果報告！
-                             </button>
-                        </div>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
-                    {explanationImageSrcs && (
-                        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 animate-fade-in cursor-pointer" onClick={() => setExplanationImageSrcs(null)}>
-                            <div className="relative max-w-4xl max-h-full bg-white p-1 rounded shadow-xl cursor-default" onClick={e => e.stopPropagation()}>
-                                <button onClick={() => setExplanationImageSrcs(null)} className="absolute -top-10 right-0 text-white hover:text-gray-300"><i className="fas fa-times text-3xl"></i></button>
-                                <div className="overflow-auto max-h-[85vh]">
-                                    <AsyncImage srcs={explanationImageSrcs} alt="解説" className="max-w-full h-auto" fallback={<div className="p-8 text-center text-gray-500"><p>解説画像が見つかりませんでした。</p></div>} />
-                                </div>
+                    <div className="flex flex-col items-center justify-center mt-8 pb-8 space-y-4">
+                            {/* 【修正】スタート画面のボタンに合わせてスタイル変更（hover:scale削除、rounded追加） */}
+                            <button onClick={onRestart} className="bg-red-600 text-white font-bold text-lg py-4 px-12 rounded shadow-lg transition-all hover:bg-red-700">トップページに戻る</button>
+                            
+                            {/* 【修正】こちらも挙動を合わせる（hover:scale削除） */}
+                            <button onClick={shareOnX} className="bg-black text-white font-bold text-lg py-3 px-10 rounded-full shadow-lg transition-all hover:bg-gray-800 flex items-center">
+                            <i className="fab fa-x-twitter mr-2 text-xl"></i> 𝕏で結果報告！
+                        </button>
+                    </div>
+                </div>
+                {explanationImageSrcs && (
+                    <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 animate-fade-in cursor-pointer" onClick={() => setExplanationImageSrcs(null)}>
+                        <div className="relative max-w-4xl max-h-full bg-white p-1 rounded shadow-xl cursor-default" onClick={e => e.stopPropagation()}>
+                            <button onClick={() => setExplanationImageSrcs(null)} className="absolute -top-10 right-0 text-white hover:text-gray-300"><i className="fas fa-times text-3xl"></i></button>
+                            <div className="overflow-auto max-h-[85vh]">
+                                <AsyncImage srcs={explanationImageSrcs} alt="解説" className="max-w-full h-auto" fallback={<div className="p-8 text-center text-gray-500"><p>解説画像が見つかりませんでした。</p></div>} />
                             </div>
                         </div>
-                    )}
-                </div>
-            );
-        };
+                    </div>
+                )}
+            </div>
+        );
+    };
 
         const QuestionListItem = forwardRef(({ q, isActive, isAnswered, isBookmarked, userAnswer, onClick }, ref) => {
             let answerText = "";
