@@ -288,8 +288,8 @@
             );
         };
 
-        // CanvasLayer: 元のコードをほぼ維持。updateSize で transform を累積しないよう setTransform を使うように修正。
-        const CanvasLayer = ({ drawings, onDrawEnd, tool, color, isVisible }) => {
+        // CanvasLayer: 修正済み。drawings の undefined チェックを追加し、白屏を防ぐ。
+        const CanvasLayer = ({ drawings = [], onDrawEnd, tool, color, isVisible }) => {
             const canvasRef = useRef(null);
             const isDrawing = useRef(false);
             const currentStroke = useRef([]);
@@ -307,7 +307,6 @@
                         canvas.style.width = `${parent.clientWidth}px`;
                         canvas.style.height = `${parent.clientHeight}px`;
                         const ctx = canvas.getContext('2d');
-                        // 変更点: scale の累積を防ぐため setTransform を使う（既存の挙動を壊さずに安定化）
                         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
                         ctx.lineCap = 'round';
                         ctx.lineJoin = 'round';
@@ -324,12 +323,15 @@
                 const canvas = canvasRef.current;
                 const ctx = ctxRef.current;
                 if (!canvas || !ctx) return;
-                // clear は device-pixel 空間で行う（既存のコードと同様）
+                
                 ctx.save();
                 ctx.setTransform(1, 0, 0, 1, 0, 0);
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 ctx.restore();
                 
+                // 【修正】 安全対策：drawings が配列でない場合は処理しない
+                if (!Array.isArray(drawings)) return;
+
                 drawings.forEach(stroke => {
                     if (stroke.tool === 'clear') {
                         ctx.save();
@@ -343,7 +345,7 @@
             };
 
             const drawStroke = (ctx, stroke) => {
-                if (stroke.points.length < 1) return;
+                if (!stroke.points || stroke.points.length < 1) return;
                 ctx.beginPath();
                 if (stroke.tool === 'eraser') {
                     ctx.globalCompositeOperation = 'destination-out';
@@ -374,27 +376,29 @@
                 if (!ctx || !canvas) return;
                 const pos = getPos(e);
                 currentStroke.current.push(pos);
-                // redraw existing and live stroke
+                
                 ctx.save();
                 ctx.setTransform(1, 0, 0, 1, 0, 0);
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 ctx.restore();
-                drawings.forEach(stroke => {
-                    if (stroke.tool === 'clear') {
-                        ctx.save();
-                        ctx.setTransform(1, 0, 0, 1, 0, 0);
-                        ctx.clearRect(0, 0, canvas.width, canvas.height);
-                        ctx.restore();
-                    } else {
-                        drawStroke(ctx, stroke);
-                    }
-                });
+
+                if (Array.isArray(drawings)) {
+                    drawings.forEach(stroke => {
+                        if (stroke.tool === 'clear') {
+                            ctx.save();
+                            ctx.setTransform(1, 0, 0, 1, 0, 0);
+                            ctx.clearRect(0, 0, canvas.width, canvas.height);
+                            ctx.restore();
+                        } else {
+                            drawStroke(ctx, stroke);
+                        }
+                    });
+                }
                 drawStroke(ctx, { tool, color, points: currentStroke.current });
             };
 
             const getPos = (e) => {
                 const rect = canvasRef.current.getBoundingClientRect();
-                // 注意: ctx は setTransform(dpr,0,0,dpr) の状態なので、描画時には CSS px 座標で与えて問題ありません（元の挙動を維持）
                 return { x: e.clientX - rect.left, y: e.clientY - rect.top };
             };
 
@@ -423,8 +427,6 @@
                 try { e.currentTarget.releasePointerCapture && e.currentTarget.releasePointerCapture(e.pointerId); } catch {}
                 isDrawing.current = false;
                 if (currentStroke.current.length > 0) {
-                    // onDrawEnd は呼び出し側（ExamScreen）で currentQ.id を渡すようにしているため
-                    // ここでは stroke オブジェクトのみを渡す（元挙動維持）
                     onDrawEnd({ tool, color, points: [...currentStroke.current] });
                 }
                 currentStroke.current = [];
@@ -626,7 +628,8 @@
                                     
                                     <div className="relative w-full h-full select-none flex items-center justify-center bg-white shadow-lg border border-gray-200">
                                         <AsyncImage srcs={currentQ ? currentQ.imageSrcs : []} alt={`Problem ${currentQ ? currentQ.id : ''}`} className="max-w-full max-h-full object-contain pointer-events-none" fallback={<div className="absolute inset-0 w-full h-full bg-gray-50 flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-300 flex"><i className="fas fa-image text-4xl mb-2"></i><span className="text-xl font-bold text-gray-500">問題 {currentQ ? currentQ.id : ''}</span><span className="text-xs mt-2">画像を配置してください</span></div>} />
-                                        <div className="absolute inset-0 w-full h-full"><CanvasLayer drawings={drawings[currentQ ? currentQ.id : '']} onDrawEnd={(stroke) => handleDrawEnd(currentQ ? currentQ.id : null, stroke)} tool={tool} color={color} isVisible={isToolbarVisible} /></div>
+                                        {/* 【修正】 drawings が undefined の場合に空配列を渡す（フェイルセーフ） */}
+                                        <div className="absolute inset-0 w-full h-full"><CanvasLayer drawings={drawings[currentQ ? currentQ.id : ''] || []} onDrawEnd={(stroke) => handleDrawEnd(currentQ ? currentQ.id : null, stroke)} tool={tool} color={color} isVisible={isToolbarVisible} /></div>
                                     </div>
                                 </div>
                             </div>
