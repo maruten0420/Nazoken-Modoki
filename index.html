@@ -786,13 +786,15 @@
             const closeModal = () => setModalState(null);
             
             const goPrev = () => {
-                if (modalState && modalState.index > 0) {
-                    setModalState({ ...modalState, index: modalState.index - 1 });
+                if (modalState) {
+                    const newIndex = modalState.index > 0 ? modalState.index - 1 : results.grading.length - 1;
+                    setModalState({ ...modalState, index: newIndex });
                 }
             };
             const goNext = () => {
-                if (modalState && modalState.index < results.grading.length - 1) {
-                    setModalState({ ...modalState, index: modalState.index + 1 });
+                if (modalState) {
+                    const newIndex = modalState.index < results.grading.length - 1 ? modalState.index + 1 : 0;
+                    setModalState({ ...modalState, index: newIndex });
                 }
             };
             const toggleType = () => {
@@ -906,8 +908,7 @@
                                 <div className="bg-white rounded-full p-2 flex items-center justify-between pointer-events-auto shadow-lg select-none" onClick={e => e.stopPropagation()}>
                                     <button 
                                         onClick={goPrev} 
-                                        disabled={modalState.index === 0}
-                                        className={`w-12 h-12 flex items-center justify-center rounded-full transition-colors ${modalState.index === 0 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-700 hover:bg-gray-100 active:bg-gray-200'}`}
+                                        className={`w-12 h-12 flex items-center justify-center rounded-full transition-colors text-gray-700 hover:bg-gray-100 active:bg-gray-200`}
                                     >
                                         <i className="fas fa-chevron-left text-2xl"></i>
                                     </button>
@@ -930,8 +931,7 @@
 
                                     <button 
                                         onClick={goNext} 
-                                        disabled={modalState.index === results.grading.length - 1}
-                                        className={`w-12 h-12 flex items-center justify-center rounded-full transition-colors ${modalState.index === results.grading.length - 1 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-700 hover:bg-gray-100 active:bg-gray-200'}`}
+                                        className={`w-12 h-12 flex items-center justify-center rounded-full transition-colors text-gray-700 hover:bg-gray-100 active:bg-gray-200`}
                                     >
                                         <i className="fas fa-chevron-right text-2xl"></i>
                                     </button>
