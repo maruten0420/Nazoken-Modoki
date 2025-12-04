@@ -143,7 +143,7 @@
             // modeによってラッパーのクラスを切り替え
             const wrapperClass = mode === 'fit'
                 ? "relative w-full h-full flex items-center justify-center overflow-hidden bg-white"
-                : "relative w-full min-h-[100px] flex items-center justify-center bg-white"; // scrollモードならoverflow-hiddenとh-fullを外す
+                : "relative w-full min-h-[100px] flex items-center justify-center bg-white"; 
 
             return (
                 <div className={wrapperClass}>
@@ -808,6 +808,9 @@
             const currentModalSrcs = modalState 
                 ? (modalState.type === 'image' ? currentModalData.imageSrcs : currentModalData.explanationSrcs)
                 : null;
+            
+            // 修正: 問題か解説かでモードを切り替える
+            const isScrollMode = modalState && modalState.type === 'explanation';
 
             return (
                 <div className="flex flex-col h-full font-sans overflow-hidden relative z-20">
@@ -886,12 +889,15 @@
                                 </div>
 
                                 {/* Main Content */}
-                                <div className="flex-1 relative pointer-events-auto overflow-y-auto bg-white rounded-lg mb-2 custom-scrollbar" onClick={e => e.stopPropagation()}>
+                                <div 
+                                    className={`flex-1 relative pointer-events-auto bg-white rounded-lg mb-2 ${isScrollMode ? 'overflow-y-auto custom-scrollbar' : 'overflow-hidden flex items-center justify-center'}`} 
+                                    onClick={e => e.stopPropagation()}
+                                >
                                     <AsyncImage 
                                         srcs={currentModalSrcs} 
                                         alt="詳細" 
-                                        className="w-full h-auto block" 
-                                        mode="scroll"
+                                        className={isScrollMode ? "w-full h-auto block" : "max-w-full max-h-full object-contain"} 
+                                        mode={isScrollMode ? 'scroll' : 'fit'}
                                         fallback={<div className="text-gray-500 p-4 text-center">画像が見つかりません</div>} 
                                     />
                                 </div>
