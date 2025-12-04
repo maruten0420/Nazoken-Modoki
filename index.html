@@ -779,7 +779,7 @@
             };
 
             const shareOnX = () => {
-                const text = `${userName}はriddle${riddleId}で${results.totalScore}点獲得しました！判定は${getGrade(results.totalScore)}です！\nあなたも謎を解いてみよう\nhttps://maruten0420.github.io/Nazoken-Modoki/`;
+                const text = `${userName}はriddle${riddleId}で${results.totalScore}点獲得しました！判定は${getGrade(results.totalScore)}です！\nあなたも謎を解いてみよう\n#謎解き模擬試験\n\nhttps://maruten0420.github.io/Nazoken-Modoki/`;
                 const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
                 window.open(url, '_blank');
             };
