@@ -5,23 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>謎検もどき</title>
     
-    <!-- 【追加】ファビコン（ブラウザのタブやブックマークのアイコン） -->
     <link rel="icon" href="deco/icon.png" type="image/png">
-    <!-- 【追加】スマホのホーム画面に追加したときのアイコン -->
     <link rel="apple-touch-icon" href="deco/icon.png">
     
-    <!-- React & ReactDOM -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <!-- Babel (JSX Converter) -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome (Icons) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
-    <!-- YakuHanJP -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/yakuhanjp@3.4.1/dist/css/yakuhanjp.min.css">
     
     <style>
@@ -32,32 +24,16 @@
             overflow: hidden;
             background-color: #ffffff;
         }
-
-        .font-number {
-            font-family: 'Oswald', sans-serif;
-            letter-spacing: 0.05em;
-        }
-        
+        .font-number { font-family: 'Oswald', sans-serif; letter-spacing: 0.05em; }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #ffffff; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #888; }
-        
         .cursor-pen { cursor: crosshair; }
         .cursor-eraser { cursor: cell; } 
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        .animate-fade-in {
-            animation: fadeIn 0.5s ease-in-out;
-        }
-
-        /* モバイルでのタップハイライトを無効化 */
-        * {
-            -webkit-tap-highlight-color: transparent;
-        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .animate-fade-in { animation: fadeIn 0.5s ease-in-out; }
+        * { -webkit-tap-highlight-color: transparent; }
     </style>
 </head>
 <body class="text-gray-800 w-full overflow-hidden relative">
@@ -70,15 +46,11 @@
         // --- Constants ---
         const FILE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.jfif', '.gif'];
 
-        // --- Custom Hook: Viewport Height ---
+        // --- Custom Hook ---
         const useViewportHeight = () => {
             const [height, setHeight] = useState(window.innerHeight);
-
             useEffect(() => {
-                const handleResize = () => {
-                    setHeight(window.innerHeight);
-                };
-                handleResize();
+                const handleResize = () => setHeight(window.innerHeight);
                 window.addEventListener('resize', handleResize);
                 window.addEventListener('orientationchange', handleResize);
                 return () => {
@@ -86,17 +58,15 @@
                     window.removeEventListener('orientationchange', handleResize);
                 };
             }, []);
-
             return height;
         };
 
-        // --- Helper: Circled Numbers ---
         const getCircledNumber = (index) => {
             const circled = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩'];
             return circled[index] || `(${index + 1})`;
         };
 
-        // --- Components ---
+        // --- UI Components (Defined BEFORE Screens to avoid ReferenceErrors) ---
 
         const ConfirmationModal = ({ isOpen, message, onConfirm, onCancel }) => {
             if (!isOpen) return null;
@@ -123,48 +93,26 @@
                 setLoading(true);
                 setError(false);
                 setLoadedSrc(null);
-
                 const candidates = srcs || (src ? [src] : []);
-                
                 if (candidates.length === 0) {
                     setError(true);
                     setLoading(false);
                     return;
                 }
-
                 let isMounted = true;
                 let attemptIndex = 0;
-
                 const loadNext = () => {
                     if (attemptIndex >= candidates.length) {
-                        if (isMounted) {
-                            setError(true);
-                            setLoading(false);
-                        }
+                        if (isMounted) { setError(true); setLoading(false); }
                         return;
                     }
-
                     const img = new Image();
                     const currentCandidate = candidates[attemptIndex];
                     img.src = currentCandidate;
-                    
-                    img.onload = () => {
-                        if (isMounted) {
-                            setLoadedSrc(currentCandidate);
-                            setLoading(false);
-                        }
-                    };
-                    
-                    img.onerror = () => {
-                        if (isMounted) {
-                            attemptIndex++;
-                            loadNext();
-                        }
-                    };
+                    img.onload = () => { if (isMounted) { setLoadedSrc(currentCandidate); setLoading(false); } };
+                    img.onerror = () => { if (isMounted) { attemptIndex++; loadNext(); } };
                 };
-
                 loadNext();
-
                 return () => { isMounted = false; };
             }, [src, srcs]);
 
@@ -174,116 +122,6 @@
                 <div className="relative w-full h-full flex items-center justify-center overflow-hidden bg-white">
                     {loading && <div className="absolute inset-0 flex items-center justify-center bg-gray-50 text-gray-400 font-bold text-xs z-0 font-number">Loading...</div>}
                     <img src={loadedSrc} alt={alt} className={`${className} ${loading ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`} />
-                </div>
-            );
-        };
-
-        const StartScreen = ({ onStart, initialName }) => {
-            const [handleName, setHandleName] = useState(initialName || "");
-            const [selectedRiddle, setSelectedRiddle] = useState(1);
-            const [riddleInfo, setRiddleInfo] = useState({ creator: '...', count: '...', limit: '...' });
-
-            useEffect(() => {
-                const fetchRiddleInfo = async () => {
-                    setRiddleInfo({ creator: '読み込み中...', count: '...', limit: '...' });
-                    try {
-                        const csvPath = `riddle/riddle${selectedRiddle}/riddle${selectedRiddle}.csv`;
-                        const response = await fetch(csvPath);
-                        if (!response.ok) throw new Error('Not found');
-                        const buffer = await response.arrayBuffer();
-                        const decoder = new TextDecoder('utf-8');
-                        const text = decoder.decode(buffer);
-                        const firstLine = text.split(/\r\n|\n/)[0];
-                        if (!firstLine) throw new Error('Empty');
-                        
-                        const [count, , limit, creator] = firstLine.split(',');
-                        
-                        setRiddleInfo({
-                            count: count ? `${count}問` : '不明',
-                            limit: limit ? `${limit}分` : '不明',
-                            creator: creator ? creator.trim() : '不明'
-                        });
-                    } catch (e) {
-                        setRiddleInfo({ creator: '不明', count: '不明', limit: '不明' });
-                    }
-                };
-                fetchRiddleInfo();
-            }, [selectedRiddle]);
-
-            const onNameChange = (e) => {
-                let val = e.target.value;
-                val = val.replace(/['";\\<>]/g, '');
-                setHandleName(val);
-            };
-
-            return (
-                <div className="h-full overflow-y-auto relative z-20 custom-scrollbar">
-                    <div className="flex flex-col items-center justify-center min-h-full p-4">
-                        <div className="max-w-4xl w-full bg-white p-6 md:p-8 space-y-6 md:space-y-8 shadow-xl rounded-lg my-auto">
-                            <div className="border-b-2 border-red-600 pb-4 mb-4 md:mb-8 flex justify-between items-end">
-                                <div className="h-10 md:h-12">
-                                    <img src="deco/logo.png" alt="ロゴ" className="h-full object-contain" onError={(e) => e.target.style.display = 'none'} />
-                                </div>
-                                <div className="text-xs md:text-sm text-gray-500">ユーザーネーム: {handleName || "未入力"}</div>
-                            </div>
-                            <div className="space-y-4 md:space-y-6">
-                                <div className="bg-gray-50 p-4 md:p-6 rounded border border-gray-200">
-                                    <label className="block text-gray-700 font-bold mb-2 text-sm md:text-base">ハンドルネーム</label>
-                                    <input 
-                                        type="text" 
-                                        className="w-full border-2 border-gray-300 p-2 md:p-3 rounded focus:outline-none focus:border-red-500 text-base md:text-lg" 
-                                        placeholder="ここに入力してください" 
-                                        value={handleName} 
-                                        onChange={onNameChange}
-                                        maxLength={20}
-                                    />
-                                </div>
-                                <div className="bg-gray-50 p-4 md:p-6 rounded border border-gray-200">
-                                    <label className="block text-gray-700 font-bold mb-4 text-sm md:text-base">問題セット選択</label>
-                                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4 mb-4">
-                                        <button 
-                                            onClick={() => setSelectedRiddle(1)}
-                                            className={`border-2 font-bold py-2 md:py-3 px-2 md:px-4 rounded shadow-sm font-number transition-colors text-sm md:text-base ${selectedRiddle === 1 ? 'bg-red-600 border-red-600 text-white' : 'bg-red-50 border-red-500 text-red-700'}`}
-                                        >
-                                            riddle1
-                                        </button>
-                                        
-                                        <button 
-                                            onClick={() => setSelectedRiddle(2)}
-                                            className={`border-2 font-bold py-2 md:py-3 px-2 md:px-4 rounded shadow-sm font-number transition-colors text-sm md:text-base ${selectedRiddle === 2 ? 'bg-red-600 border-red-600 text-white' : 'bg-red-50 border-red-500 text-red-700'}`}
-                                        >
-                                            riddle2
-                                        </button>
-
-                                        {[3,4,5,6,7,8,9,10].map(num => (
-                                            <button key={num} disabled className="bg-gray-200 text-gray-400 font-bold py-2 md:py-3 px-2 md:px-4 rounded cursor-not-allowed font-number text-sm md:text-base">riddle{num}</button>
-                                        ))}
-                                    </div>
-                                    <div className="text-sm md:text-base text-gray-700 bg-white p-3 rounded border border-gray-300 flex flex-wrap gap-4 items-center">
-                                        <div className="flex items-center"><i className="fas fa-user-edit text-gray-400 mr-2"></i><span className="font-bold mr-1">制作者:</span> {riddleInfo.creator}</div>
-                                        <div className="flex items-center"><i className="fas fa-list-ol text-gray-400 mr-2"></i><span className="font-bold mr-1">問題数:</span> {riddleInfo.count}</div>
-                                        <div className="flex items-center"><i className="fas fa-stopwatch text-gray-400 mr-2"></i><span className="font-bold mr-1">制限時間:</span> {riddleInfo.limit}</div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="flex flex-col items-center justify-center mt-8 md:mt-12 space-y-4">
-                                <button 
-                                    onClick={() => handleName && onStart(handleName, selectedRiddle)} 
-                                    disabled={!handleName} 
-                                    className={`font-bold text-lg md:text-xl py-3 md:py-4 px-8 md:px-12 rounded shadow-lg transition-all ${handleName ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-gray-400 text-white cursor-not-allowed'}`}
-                                >
-                                    模試を受ける
-                                </button>
-                                <div className="text-xs text-gray-500 text-center leading-relaxed">
-                                    <p>・このサイトは本家謎検の挙動とは異なることがあります。</p>
-                                    <p>・このサイトはSCRAP、および本家謎検とは一切関係ございません。</p>
-                                    <p>・ページの再読み込みや「戻る」を行うと、進行状況がリセットされます。</p>
-                                    <p>・途中で拡大率を変えないようご注意ください</p>
-                                    <p>・推奨環境: Google Chrome / Safari 最新版</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             );
         };
@@ -322,14 +160,11 @@
                 const canvas = canvasRef.current;
                 const ctx = ctxRef.current;
                 if (!canvas || !ctx) return;
-                
                 ctx.save();
                 ctx.setTransform(1, 0, 0, 1, 0, 0);
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 ctx.restore();
-                
                 if (!Array.isArray(drawings)) return;
-
                 drawings.forEach(stroke => {
                     if (stroke.tool === 'clear') {
                         ctx.save();
@@ -374,12 +209,10 @@
                 if (!ctx || !canvas) return;
                 const pos = getPos(e);
                 currentStroke.current.push(pos);
-                
                 ctx.save();
                 ctx.setTransform(1, 0, 0, 1, 0, 0);
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 ctx.restore();
-
                 if (Array.isArray(drawings)) {
                     drawings.forEach(stroke => {
                         if (stroke.tool === 'clear') {
@@ -415,11 +248,8 @@
                 }
             };
 
-            const handlePointerMove = (e) => {
-                if (!isDrawing.current || !isVisible) return;
-                drawLive(e);
-            };
-
+            const handlePointerMove = (e) => { if (!isDrawing.current || !isVisible) return; drawLive(e); };
+            
             const handlePointerUp = (e) => {
                 if (!isDrawing.current) return;
                 try { e.currentTarget.releasePointerCapture && e.currentTarget.releasePointerCapture(e.pointerId); } catch {}
@@ -435,6 +265,121 @@
             return (
                 <div className={`absolute inset-0 w-full h-full z-10 ${!isVisible ? 'pointer-events-none' : ''}`} style={{ touchAction: 'none' }}>
                     <canvas ref={canvasRef} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerLeave={handlePointerUp} className={`w-full h-full touch-none ${tool === 'eraser' ? 'cursor-eraser' : 'cursor-pen'}`} />
+                </div>
+            );
+        };
+
+        const QuestionListItem = forwardRef(({ q, isActive, isAnswered, isBookmarked, userAnswer, onClick }, ref) => {
+            let answerText = "";
+            if (isAnswered) {
+                if (q.type === 'choice' && userAnswer !== undefined) {
+                    answerText = `${getCircledNumber(userAnswer)}${q.options[userAnswer]}`; 
+                } else if (userAnswer) {
+                    answerText = userAnswer;
+                }
+            }
+            const bgClass = isActive ? 'bg-red-50' : (isAnswered ? 'bg-gray-200' : 'bg-white');
+            const textClass = isAnswered ? 'text-gray-600' : 'text-gray-800';
+
+            return (
+                <button ref={ref} onClick={onClick} className={`w-full border-b border-gray-200 flex items-stretch text-left h-20 transition-colors ${bgClass} ${textClass}`}>
+                    <div className={`w-1 shrink-0 ${isActive ? 'bg-red-600' : isBookmarked ? 'bg-red-500' : 'bg-transparent'}`}></div>
+                    <div className="flex-1 p-2 relative overflow-hidden h-full grid grid-cols-[1fr_auto] grid-rows-2 gap-x-2">
+                        <div className="flex items-center space-x-2 col-start-1 row-start-1 self-start">
+                            <span className={`text-2xl font-bold leading-none font-number ${isActive ? 'text-red-600' : isAnswered ? 'text-gray-600' : 'text-gray-800'}`}>{String(q.id).padStart(2, '0')}</span>
+                            <span className="text-xs text-gray-400">{q.points}点</span>
+                        </div>
+                        <div className="col-start-2 row-start-1 row-end-3 w-16 h-full bg-white border border-gray-200 flex items-center justify-center overflow-hidden self-center">
+                             <AsyncImage srcs={q.imageSrcs} className="w-full h-full object-cover" />
+                        </div>
+                        <div className="col-start-1 row-start-2 flex items-end self-end h-full relative w-full overflow-hidden">
+                            <div className="flex items-center w-full gap-2">
+                                {isBookmarked && <div className="text-red-600 flex-shrink-0"><i className="fas fa-bookmark text-xl"></i></div>}
+                                {isAnswered && <span className="text-sm font-bold truncate flex-1 min-w-0 text-left">{answerText}</span>}
+                            </div>
+                        </div>
+                    </div>
+                </button>
+            );
+        });
+
+        // --- Screen Components (Defined AFTER UI Components) ---
+
+        const StartScreen = ({ onStart, initialName }) => {
+            const [handleName, setHandleName] = useState(initialName || "");
+            const [selectedRiddle, setSelectedRiddle] = useState(1);
+            const [riddleInfo, setRiddleInfo] = useState({ creator: '...', count: '...', limit: '...' });
+
+            useEffect(() => {
+                const fetchRiddleInfo = async () => {
+                    setRiddleInfo({ creator: '読み込み中...', count: '...', limit: '...' });
+                    try {
+                        const csvPath = `riddle/riddle${selectedRiddle}/riddle${selectedRiddle}.csv`;
+                        const response = await fetch(csvPath);
+                        if (!response.ok) throw new Error('Not found');
+                        const buffer = await response.arrayBuffer();
+                        const decoder = new TextDecoder('utf-8');
+                        const text = decoder.decode(buffer);
+                        const firstLine = text.split(/\r\n|\n/)[0];
+                        if (!firstLine) throw new Error('Empty');
+                        const [count, , limit, creator] = firstLine.split(',');
+                        setRiddleInfo({
+                            count: count ? `${count}問` : '不明',
+                            limit: limit ? `${limit}分` : '不明',
+                            creator: creator ? creator.trim() : '不明'
+                        });
+                    } catch (e) {
+                        setRiddleInfo({ creator: '不明', count: '不明', limit: '不明' });
+                    }
+                };
+                fetchRiddleInfo();
+            }, [selectedRiddle]);
+
+            const onNameChange = (e) => {
+                let val = e.target.value;
+                val = val.replace(/['";\\<>]/g, '');
+                setHandleName(val);
+            };
+
+            return (
+                <div className="h-full overflow-y-auto relative z-20 custom-scrollbar">
+                    <div className="flex flex-col items-center justify-center min-h-full p-4">
+                        <div className="max-w-4xl w-full bg-white p-6 md:p-8 space-y-6 md:space-y-8 shadow-xl rounded-lg my-auto">
+                            <div className="border-b-2 border-red-600 pb-4 mb-4 md:mb-8 flex justify-between items-end">
+                                <div className="h-10 md:h-12"><img src="deco/logo.png" alt="ロゴ" className="h-full object-contain" onError={(e) => e.target.style.display = 'none'} /></div>
+                                <div className="text-xs md:text-sm text-gray-500">ユーザーネーム: {handleName || "未入力"}</div>
+                            </div>
+                            <div className="space-y-4 md:space-y-6">
+                                <div className="bg-gray-50 p-4 md:p-6 rounded border border-gray-200">
+                                    <label className="block text-gray-700 font-bold mb-2 text-sm md:text-base">ハンドルネーム</label>
+                                    <input type="text" className="w-full border-2 border-gray-300 p-2 md:p-3 rounded focus:outline-none focus:border-red-500 text-base md:text-lg" placeholder="ここに入力してください" value={handleName} onChange={onNameChange} maxLength={20} />
+                                </div>
+                                <div className="bg-gray-50 p-4 md:p-6 rounded border border-gray-200">
+                                    <label className="block text-gray-700 font-bold mb-4 text-sm md:text-base">問題セット選択</label>
+                                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4 mb-4">
+                                        <button onClick={() => setSelectedRiddle(1)} className={`border-2 font-bold py-2 md:py-3 px-2 md:px-4 rounded shadow-sm font-number transition-colors text-sm md:text-base ${selectedRiddle === 1 ? 'bg-red-600 border-red-600 text-white' : 'bg-red-50 border-red-500 text-red-700'}`}>riddle1</button>
+                                        <button onClick={() => setSelectedRiddle(2)} className={`border-2 font-bold py-2 md:py-3 px-2 md:px-4 rounded shadow-sm font-number transition-colors text-sm md:text-base ${selectedRiddle === 2 ? 'bg-red-600 border-red-600 text-white' : 'bg-red-50 border-red-500 text-red-700'}`}>riddle2</button>
+                                        {[3,4,5,6,7,8,9,10].map(num => (<button key={num} disabled className="bg-gray-200 text-gray-400 font-bold py-2 md:py-3 px-2 md:px-4 rounded cursor-not-allowed font-number text-sm md:text-base">riddle{num}</button>))}
+                                    </div>
+                                    <div className="text-sm md:text-base text-gray-700 bg-white p-3 rounded border border-gray-300 flex flex-wrap gap-4 items-center">
+                                        <div className="flex items-center"><i className="fas fa-user-edit text-gray-400 mr-2"></i><span className="font-bold mr-1">制作者:</span> {riddleInfo.creator}</div>
+                                        <div className="flex items-center"><i className="fas fa-list-ol text-gray-400 mr-2"></i><span className="font-bold mr-1">問題数:</span> {riddleInfo.count}</div>
+                                        <div className="flex items-center"><i className="fas fa-stopwatch text-gray-400 mr-2"></i><span className="font-bold mr-1">制限時間:</span> {riddleInfo.limit}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex flex-col items-center justify-center mt-8 md:mt-12 space-y-4">
+                                <button onClick={() => handleName && onStart(handleName, selectedRiddle)} disabled={!handleName} className={`font-bold text-lg md:text-xl py-3 md:py-4 px-8 md:px-12 rounded shadow-lg transition-all ${handleName ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-gray-400 text-white cursor-not-allowed'}`}>模試を受ける</button>
+                                <div className="text-xs text-gray-500 text-center leading-relaxed">
+                                    <p>・このサイトは本家謎検の挙動とは異なることがあります。</p>
+                                    <p>・このサイトはSCRAP、および本家謎検とは一切関係ございません。</p>
+                                    <p>・ページの再読み込みや「戻る」を行うと、進行状況がリセットされます。</p>
+                                    <p>・途中で拡大率を変えないようご注意ください</p>
+                                    <p>・推奨環境: Google Chrome / Safari 最新版</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             );
         };
@@ -461,11 +406,7 @@
             useEffect(() => {
                 const timer = setInterval(() => {
                     setTimeLeft(prev => {
-                        if (prev <= 1) {
-                            clearInterval(timer);
-                            setIsTimeUp(true);
-                            return 0;
-                        }
+                        if (prev <= 1) { clearInterval(timer); setIsTimeUp(true); return 0; }
                         return prev - 1;
                     });
                 }, 1000);
@@ -492,8 +433,7 @@
             };
 
             const handleAnswerChange = (val) => {
-                if (!currentQ) return;
-                if (lockedAnswers[currentQ.id]) return;
+                if (!currentQ || lockedAnswers[currentQ.id]) return;
                 setAnswers(prev => ({ ...prev, [currentQ.id]: val }));
             };
 
@@ -501,11 +441,8 @@
                 if (!currentQ) return;
                 setLockedAnswers(prev => ({ ...prev, [currentQ.id]: true }));
                 setTimeout(() => {
-                    if (currentQIndex === config.length - 1) {
-                        setCurrentQIndex(0);
-                    } else {
-                        setCurrentQIndex(prev => prev + 1);
-                    }
+                    if (currentQIndex === config.length - 1) { setCurrentQIndex(0); } 
+                    else { setCurrentQIndex(prev => prev + 1); }
                 }, 300);
             };
 
@@ -546,41 +483,27 @@
                 if (!currentQ) return;
                 const qDrawings = drawings[currentQ.id] || [];
                 if (qDrawings.length === 0) return;
-
                 const last = qDrawings[qDrawings.length - 1];
                 const remaining = qDrawings.slice(0, -1);
-
                 setDrawings(prev => ({ ...prev, [currentQ.id]: remaining }));
-                setRedoStack(prev => ({ 
-                    ...prev, 
-                    [currentQ.id]: [...(prev[currentQ.id] || []), last] 
-                }));
+                setRedoStack(prev => ({ ...prev, [currentQ.id]: [...(prev[currentQ.id] || []), last] }));
             };
 
             const redo = () => {
                 if (!currentQ) return;
                 const qRedos = redoStack[currentQ.id] || [];
                 if (qRedos.length === 0) return;
-
                 const toRestore = qRedos[qRedos.length - 1];
                 const remaining = qRedos.slice(0, -1);
-
                 setRedoStack(prev => ({ ...prev, [currentQ.id]: remaining }));
-                setDrawings(prev => ({ 
-                    ...prev, 
-                    [currentQ.id]: [...(prev[currentQ.id] || []), toRestore] 
-                }));
+                setDrawings(prev => ({ ...prev, [currentQ.id]: [...(prev[currentQ.id] || []), toRestore] }));
             };
 
             const clearAll = () => { 
                 if (!currentQ) return;
                 const qDrawings = drawings[currentQ.id] || [];
-                if (qDrawings.length === 0 || (qDrawings.length > 0 && qDrawings[qDrawings.length - 1].tool === 'clear')) {
-                    return;
-                }
-
+                if (qDrawings.length === 0 || (qDrawings.length > 0 && qDrawings[qDrawings.length - 1].tool === 'clear')) return;
                 const clearStroke = { tool: 'clear', color: 'none', points: [] };
-                
                 setDrawings(prev => ({ ...prev, [currentQ.id]: [...qDrawings, clearStroke] }));
                 setRedoStack(prev => { const next = {...prev}; delete next[currentQ.id]; return next; }); 
             };
@@ -713,7 +636,6 @@
             const results = useMemo(() => {
                 let totalScore = 0;
                 let maxScore = 0; 
-                
                 const grading = config.map(q => {
                     maxScore += q.points;
                     const userAns = userAnswers[q.id];
@@ -749,14 +671,7 @@
                     }
 
                     if (isCorrect) totalScore += q.points;
-                    return { 
-                        id: q.id, 
-                        userAns: displayUserAns, 
-                        correctAns: displayCorrectAns, 
-                        isCorrect, 
-                        explanationSrcs: q.explanationSrcs,
-                        imageSrcs: q.imageSrcs 
-                    };
+                    return { id: q.id, userAns: displayUserAns, correctAns: displayCorrectAns, isCorrect, explanationSrcs: q.explanationSrcs, imageSrcs: q.imageSrcs };
                 });
                 return { grading, totalScore, maxScore };
             }, [userAnswers, config]);
@@ -865,7 +780,6 @@
             const [config, setConfig] = useState([]);
             const [loading, setLoading] = useState(false);
             const viewportHeight = useViewportHeight();
-            
             const [timeLimit, setTimeLimit] = useState(60);
             const [currentRiddleId, setCurrentRiddleId] = useState(1);
 
@@ -878,7 +792,6 @@
                     const buffer = await response.arrayBuffer();
                     const decoder = new TextDecoder('utf-8');
                     const text = decoder.decode(buffer);
-                    
                     const lines = text.split(/\r\n|\n/).filter(line => line.trim() !== '');
                     if (lines.length < 1) throw new Error('Empty CSV');
 
@@ -888,7 +801,6 @@
                     const timeLimitStr = headCols[2] || '';
                     const totalQuestions = parseInt(totalStr, 10) || 0;
                     const selectionCount = parseInt(selCountStr, 10) || 0;
-
                     const parsedLimit = parseInt(timeLimitStr, 10);
                     setTimeLimit(!isNaN(parsedLimit) && parsedLimit > 0 ? parsedLimit : 60);
 
@@ -908,22 +820,17 @@
                     for (let i = 0; i < totalQuestions; i++) {
                         const lineIdx = startAnswerLine + i;
                         if (lineIdx >= lines.length) break;
-                        
                         const cols = lines[lineIdx] ? lines[lineIdx].split(',') : [];
                         const points = parseInt(cols[0], 10) || 0;
                         const validAnswers = cols.slice(1).filter(a => a && a.trim() !== '');
                         const primaryAnswer = cols[1] ? cols[1].trim() : ""; 
-                        
                         const qId = i + 1;
                         const isSelection = !!selectionMap[qId];
-
                         const qNum = String(qId).padStart(2, '0');
                         const imgBase = `riddle/riddle${riddleId}/riddle${riddleId}_${qNum}`;
                         const ansBase = `riddle/riddle${riddleId}/answer_${qNum}`;
-                        
                         const imageSrcs = FILE_EXTENSIONS.map(ext => imgBase + ext);
                         const explanationSrcs = FILE_EXTENSIONS.map(ext => ansBase + ext);
-                        
                         tempConfig.push({
                             id: qId,
                             imageSrcs: imageSrcs,
@@ -935,7 +842,6 @@
                             primaryAnswer: primaryAnswer
                         });
                     }
-                    
                     setConfig(tempConfig);
                     setScreen('exam'); 
                 } catch (e) {
@@ -960,16 +866,10 @@
             }
 
             return (
-                <div 
-                    className="w-full font-sans border-[4px] md:border-[8px] border-red-600 box-border overflow-hidden relative"
-                    style={{ height: viewportHeight }} 
-                >
+                <div className="w-full font-sans border-[4px] md:border-[8px] border-red-600 box-border overflow-hidden relative" style={{ height: viewportHeight }}>
                     <div style={{ position: 'absolute', inset: 0, zIndex: -1, backgroundImage: "url('deco/back.png')", backgroundRepeat: 'repeat', backgroundPosition: 'center', opacity: 0.5 }}></div>
-
                     {screen === 'start' && <StartScreen onStart={startExam} initialName={userName} />}
-                    
                     {screen === 'exam' && <ExamScreen userName={userName} onFinish={finishExam} config={config} timeLimit={timeLimit} />}
-                    
                     {screen === 'finish' && <FinishScreen userAnswers={finalAnswers} onRestart={restart} config={config} riddleId={currentRiddleId} userName={userName} />}
                 </div>
             );
