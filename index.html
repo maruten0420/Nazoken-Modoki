@@ -22,18 +22,24 @@
             user-select: none; 
             touch-action: none; 
             overflow: hidden;
-            background-color: #ffffff;
+            background-color: #f0f9ff; /* 薄い青背景 */
         }
         .font-number { font-family: 'Oswald', sans-serif; letter-spacing: 0.05em; }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #ffffff; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #888; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #93c5fd; border-radius: 3px; } /* 青系のスクロールバー */
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #3b82f6; }
         .cursor-pen { cursor: crosshair; }
         .cursor-eraser { cursor: cell; } 
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .animate-fade-in { animation: fadeIn 0.5s ease-in-out; }
         * { -webkit-tap-highlight-color: transparent; }
+
+        /* 方眼紙パターンの背景 */
+        .grid-pattern {
+            background-image: linear-gradient(#e0f2fe 1px, transparent 1px), linear-gradient(90deg, #e0f2fe 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
     </style>
 </head>
 <body class="text-gray-800 w-full overflow-hidden relative">
@@ -89,16 +95,26 @@
 
         // --- UI Components ---
 
+        // コーナー装飾コンポーネント
+        const CornerDeco = () => (
+            <>
+                <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-blue-800 rounded-tl-lg pointer-events-none z-50"></div>
+                <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-blue-800 rounded-tr-lg pointer-events-none z-50"></div>
+                <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-blue-800 rounded-bl-lg pointer-events-none z-50"></div>
+                <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-blue-800 rounded-br-lg pointer-events-none z-50"></div>
+            </>
+        );
+
         const ConfirmationModal = ({ isOpen, message, onConfirm, onCancel }) => {
             if (!isOpen) return null;
             return (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" style={{ touchAction: 'none' }}>
-                    <div className="bg-white rounded-lg shadow-xl p-6 max-w-sm w-full border-2 border-red-600 animate-fade-in relative z-50">
-                        <h3 className="text-lg font-bold mb-4 text-gray-800">確認</h3>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-blue-900/30 p-4 backdrop-blur-sm" style={{ touchAction: 'none' }}>
+                    <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full border-2 border-blue-600 animate-fade-in relative z-50">
+                        <h3 className="text-lg font-bold mb-4 text-blue-900">確認</h3>
                         <p className="text-gray-600 mb-6">{message}</p>
                         <div className="flex justify-end space-x-3">
-                            <button onClick={onCancel} className="px-4 py-2 border border-gray-300 rounded text-gray-600 hover:bg-gray-100 font-bold">キャンセル</button>
-                            <button onClick={onConfirm} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 font-bold">OK</button>
+                            <button onClick={onCancel} className="px-4 py-2 border border-blue-300 rounded text-blue-600 hover:bg-blue-50 font-bold transition-colors">キャンセル</button>
+                            <button onClick={onConfirm} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-bold transition-colors shadow-md">OK</button>
                         </div>
                     </div>
                 </div>
@@ -137,7 +153,7 @@
                 return () => { isMounted = false; };
             }, [src, srcs]);
 
-            if (error) return fallback || <div className="flex flex-col items-center text-gray-400 p-2 justify-center h-full bg-white border"><i className="fas fa-image text-2xl mb-1"></i><span className="text-[10px] mt-1">No Image</span></div>;
+            if (error) return fallback || <div className="flex flex-col items-center text-blue-300 p-2 justify-center h-full bg-blue-50/30 border border-blue-100"><i className="fas fa-image text-2xl mb-1"></i><span className="text-[10px] mt-1">No Image</span></div>;
 
             const wrapperClass = mode === 'fit'
                 ? "relative w-full h-full flex items-center justify-center overflow-hidden bg-white"
@@ -145,7 +161,7 @@
 
             return (
                 <div className={wrapperClass}>
-                    {loading && <div className="absolute inset-0 flex items-center justify-center bg-gray-50 text-gray-400 font-bold text-xs z-0 font-number">Loading...</div>}
+                    {loading && <div className="absolute inset-0 flex items-center justify-center bg-blue-50 text-blue-400 font-bold text-xs z-0 font-number">Loading...</div>}
                     <img src={loadedSrc} alt={alt} className={`${className} ${loading ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`} />
                 </div>
             );
@@ -211,6 +227,7 @@
                 } else {
                     ctx.globalCompositeOperation = 'source-over';
                     ctx.lineWidth = 3;
+                    // 色のロジックは維持（赤ペンは赤く）
                     ctx.strokeStyle = stroke.color === 'black' ? '#000' : stroke.color === 'red' ? '#ff0000' : '#0000ff';
                 }
                 if (stroke.tool === 'line' && stroke.points.length > 1) {
@@ -303,23 +320,25 @@
                     answerText = userAnswer;
                 }
             }
-            const bgClass = isActive ? 'bg-red-50' : (isAnswered ? 'bg-gray-200' : 'bg-white');
-            const textClass = isAnswered ? 'text-gray-600' : 'text-gray-800';
+            // 配色を青ベースに変更
+            const bgClass = isActive ? 'bg-blue-100' : (isAnswered ? 'bg-gray-100' : 'bg-white');
+            const textClass = isAnswered ? 'text-gray-500' : 'text-gray-800';
 
             return (
-                <button ref={ref} onClick={onClick} className={`w-full border-b border-gray-200 flex items-stretch text-left h-20 transition-colors ${bgClass} ${textClass} hover:bg-gray-200 group`}>
-                    <div className={`w-1 shrink-0 ${isActive ? 'bg-red-600' : isBookmarked ? 'bg-red-500' : 'bg-transparent'}`}></div>
+                <button ref={ref} onClick={onClick} className={`w-full border-b border-gray-200 flex items-stretch text-left h-20 transition-colors ${bgClass} ${textClass} hover:bg-blue-50 group`}>
+                    <div className={`w-1 shrink-0 ${isActive ? 'bg-blue-600' : isBookmarked ? 'bg-blue-400' : 'bg-transparent'}`}></div>
                     <div className="flex-1 p-2 relative overflow-hidden h-full grid grid-cols-[1fr_auto] grid-rows-2 gap-x-2">
                         <div className="flex items-center space-x-2 col-start-1 row-start-1 self-start">
-                            <span className={`text-2xl font-bold leading-none font-number ${isActive ? 'text-red-600' : isAnswered ? 'text-gray-600' : 'text-gray-800'}`}>{String(q.id).padStart(2, '0')}</span>
+                            <span className={`text-2xl font-bold leading-none font-number ${isActive ? 'text-blue-600' : isAnswered ? 'text-gray-500' : 'text-gray-700'}`}>{String(q.id).padStart(2, '0')}</span>
                             <span className="text-xs text-gray-400">{q.points}点</span>
                         </div>
-                        <div className="col-start-2 row-start-1 row-end-3 w-16 h-full bg-white border border-gray-200 flex items-center justify-center overflow-hidden self-center">
+                        <div className="col-start-2 row-start-1 row-end-3 w-16 h-full bg-white border border-gray-200 flex items-center justify-center overflow-hidden self-center rounded shadow-sm">
                              <AsyncImage srcs={q.imageSrcs} className="w-full h-full object-cover" />
                         </div>
                         <div className="col-start-1 row-start-2 flex items-end self-end h-full relative w-full overflow-hidden">
                             <div className="flex items-center w-full gap-2">
-                                {isBookmarked && <div className="text-red-600 flex-shrink-0"><i className="fas fa-bookmark text-xl"></i></div>}
+                                {/* ブックマークもテーマに合わせて青系に変更 */}
+                                {isBookmarked && <div className="text-blue-500 flex-shrink-0"><i className="fas fa-bookmark text-xl"></i></div>}
                                 {isAnswered && <span className="text-sm font-bold truncate flex-1 min-w-0 text-left">{answerText}</span>}
                             </div>
                         </div>
@@ -401,22 +420,23 @@
             };
 
             return (
-                <div className="h-full overflow-y-auto relative z-20 custom-scrollbar">
+                <div className="h-full overflow-y-auto relative z-20 custom-scrollbar grid-pattern">
                     <div className="flex flex-col items-center justify-center min-h-full p-4">
-                        <div className="max-w-4xl w-full bg-white p-6 md:p-8 space-y-6 md:space-y-8 shadow-xl rounded-lg my-auto">
-                            <div className="border-b-2 border-red-600 pb-4 mb-4 md:mb-8 flex justify-between items-end">
+                        <div className="max-w-4xl w-full bg-white/90 backdrop-blur p-6 md:p-8 space-y-6 md:space-y-8 shadow-xl rounded-2xl my-auto border border-blue-100">
+                            {/* ヘッダーライン：赤→青 */}
+                            <div className="border-b-2 border-blue-600 pb-4 mb-4 md:mb-8 flex justify-between items-end">
                                 <div className="h-10 md:h-12"><img src="deco/logo.png" alt="ロゴ" className="h-full object-contain" onError={(e) => e.target.style.display = 'none'} /></div>
                                 <div className="text-xs md:text-sm text-gray-500">ユーザーネーム: {handleName || "(未入力)"}</div>
                             </div>
                             <div className="space-y-4 md:space-y-6">
-                                <div className="bg-gray-50 p-4 md:p-6 rounded border border-gray-200">
-                                    <label className="block text-gray-700 font-bold mb-2 text-sm md:text-base">ハンドルネーム</label>
-                                    <input type="text" className="w-full border-2 border-gray-300 p-2 md:p-3 rounded focus:outline-none focus:border-red-500 text-base md:text-lg" placeholder="ここに入力してください" value={handleName} onChange={onNameChange} maxLength={20} />
+                                <div className="bg-blue-50/50 p-4 md:p-6 rounded-xl border border-blue-200">
+                                    <label className="block text-blue-900 font-bold mb-2 text-sm md:text-base">ハンドルネーム</label>
+                                    <input type="text" className="w-full border-2 border-blue-200 p-2 md:p-3 rounded-lg focus:outline-none focus:border-blue-500 text-base md:text-lg bg-white" placeholder="ここに入力してください" value={handleName} onChange={onNameChange} maxLength={20} />
                                 </div>
-                                <div className="bg-gray-50 p-4 md:p-6 rounded border border-gray-200">
-                                    <label className="block text-gray-700 font-bold mb-4 text-sm md:text-base">問題セット選択</label>
+                                <div className="bg-blue-50/50 p-4 md:p-6 rounded-xl border border-blue-200">
+                                    <label className="block text-blue-900 font-bold mb-4 text-sm md:text-base">問題セット選択</label>
                                     {isChecking ? (
-                                        <div className="text-center py-4 text-gray-500"><i className="fas fa-spinner fa-spin mr-2"></i>問題セットを確認中...</div>
+                                        <div className="text-center py-4 text-blue-500"><i className="fas fa-spinner fa-spin mr-2"></i>問題セットを確認中...</div>
                                     ) : (
                                         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4 mb-4">
                                             {availableRiddles.length > 0 ? (
@@ -424,7 +444,7 @@
                                                     <button 
                                                         key={num} 
                                                         onClick={() => setSelectedRiddle(num)}
-                                                        className={`border-2 font-bold py-2 md:py-3 px-2 md:px-4 rounded shadow-sm font-number transition-colors text-sm md:text-base ${selectedRiddle === num ? 'bg-red-600 border-red-600 text-white' : 'bg-red-50 border-red-500 text-red-700'}`}
+                                                        className={`border-2 font-bold py-2 md:py-3 px-2 md:px-4 rounded-lg shadow-sm font-number transition-all text-sm md:text-base ${selectedRiddle === num ? 'bg-blue-600 border-blue-600 text-white shadow-md transform scale-105' : 'bg-white border-blue-300 text-blue-700 hover:bg-blue-100'}`}
                                                     >
                                                         riddle{num}
                                                     </button>
@@ -434,16 +454,17 @@
                                             )}
                                         </div>
                                     )}
-                                    <div className="text-sm md:text-base text-gray-700 bg-white p-3 rounded border border-gray-300 flex flex-wrap gap-4 items-center">
-                                        <div className="flex items-center"><i className="fas fa-user-edit text-gray-400 mr-2"></i><span className="font-bold mr-1">制作者:</span> {riddleInfo.creator}</div>
-                                        <div className="flex items-center"><i className="fas fa-list-ol text-gray-400 mr-2"></i><span className="font-bold mr-1">問題数:</span> {riddleInfo.count}</div>
-                                        <div className="flex items-center"><i className="fas fa-stopwatch text-gray-400 mr-2"></i><span className="font-bold mr-1">制限時間:</span> {riddleInfo.limit}</div>
+                                    <div className="text-sm md:text-base text-gray-700 bg-white p-3 rounded-lg border border-blue-200 flex flex-wrap gap-4 items-center">
+                                        <div className="flex items-center"><i className="fas fa-user-edit text-blue-400 mr-2"></i><span className="font-bold mr-1">制作者:</span> {riddleInfo.creator}</div>
+                                        <div className="flex items-center"><i className="fas fa-list-ol text-blue-400 mr-2"></i><span className="font-bold mr-1">問題数:</span> {riddleInfo.count}</div>
+                                        <div className="flex items-center"><i className="fas fa-stopwatch text-blue-400 mr-2"></i><span className="font-bold mr-1">制限時間:</span> {riddleInfo.limit}</div>
                                     </div>
                                 </div>
                             </div>
                             <div className="flex flex-col items-center justify-center mt-8 md:mt-12 space-y-4">
-                                <button onClick={() => selectedRiddle && onStart(handleName || "(未入力)", selectedRiddle)} disabled={!selectedRiddle} className={`font-bold text-lg md:text-xl py-3 md:py-4 px-8 md:px-12 rounded shadow-lg transition-all ${selectedRiddle ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-gray-400 text-white cursor-not-allowed'}`}>模試を受ける</button>
-                                <div className="text-xs text-gray-500 text-left leading-relaxed w-full max-w-lg">
+                                {/* ボタン：赤→青 */}
+                                <button onClick={() => selectedRiddle && onStart(handleName || "(未入力)", selectedRiddle)} disabled={!selectedRiddle} className={`font-bold text-lg md:text-xl py-3 md:py-4 px-8 md:px-12 rounded-full shadow-lg transition-all ${selectedRiddle ? 'bg-blue-600 hover:bg-blue-700 text-white hover:shadow-xl' : 'bg-gray-300 text-white cursor-not-allowed'}`}>模試を受ける</button>
+                                <div className="text-xs text-gray-500 text-left leading-relaxed w-full max-w-lg bg-gray-50 p-4 rounded-lg border border-gray-200">
                                     <p>・このサイトは本家謎検の挙動とは異なることがあります。</p>
                                     <p>・このサイトはSCRAP、および本家謎検とは一切関係ございません。</p>
                                     <p>・このサイトで起こった責任に関して一切の責任を負いかねます。</p>
@@ -594,39 +615,41 @@
 
             if (isTimeUp) {
                 return (
-                    <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center flex-col text-white animate-fade-in">
-                        <h1 className="text-6xl font-bold mb-4 font-number">TIME UP</h1>
+                    <div className="fixed inset-0 z-50 bg-blue-900/95 flex items-center justify-center flex-col text-white animate-fade-in">
+                        <h1 className="text-6xl font-bold mb-4 font-number text-blue-200">TIME UP</h1>
                         <p className="text-2xl">終了しました</p>
-                        <p className="mt-8 text-gray-400">解答画面へ移動します...</p>
+                        <p className="mt-8 text-blue-300">解答画面へ移動します...</p>
                     </div>
                 );
             }
 
             return (
-                <div className="flex flex-col h-full font-sans relative z-20 overflow-hidden">
+                <div className="flex flex-col h-full font-sans relative z-20 overflow-hidden bg-gray-50">
                     <ConfirmationModal isOpen={modalConfig.isOpen} message={modalConfig.message} onConfirm={modalConfig.onConfirm} onCancel={() => setModalConfig(prev => ({ ...prev, isOpen: false }))} />
                     
-                    <div className="bg-white border-b border-red-500 h-12 md:h-14 flex items-center justify-between px-2 md:px-4 shrink-0 z-20">
+                    {/* ヘッダー：赤→青 */}
+                    <div className="bg-white border-b-2 border-blue-500 h-12 md:h-14 flex items-center justify-between px-2 md:px-4 shrink-0 z-20 shadow-sm">
                         <div className="flex items-center space-x-2 md:space-x-4">
                             <div className="h-6 md:h-8"><img src="deco/logo.png" alt="ロゴ" className="h-full object-contain" /></div>
                             <div className="text-xs text-gray-500 hidden md:block">ユーザーネーム: {userName}</div>
-                            <button onClick={() => confirmAction('本当に受検を終了しますか？', handleFinish)} className="border border-gray-400 text-gray-700 px-2 py-0.5 md:px-3 md:py-1 text-[10px] md:text-xs hover:bg-gray-100 whitespace-nowrap">受検を終了する &gt;</button>
+                            <button onClick={() => confirmAction('本当に受検を終了しますか？', handleFinish)} className="border border-gray-400 text-gray-700 px-2 py-0.5 md:px-3 md:py-1 text-[10px] md:text-xs hover:bg-gray-100 whitespace-nowrap rounded">受検を終了する &gt;</button>
                         </div>
                         <div className="flex items-end">
                             <span className="text-[10px] md:text-sm text-gray-600 mr-1 mb-1">残り</span>
-                            <span className="text-2xl md:text-3xl font-mono text-gray-800 leading-none font-number">{formatTime(timeLeft)}</span>
+                            {/* タイマー：青系またはダークグレー */}
+                            <span className="text-2xl md:text-3xl font-mono text-blue-900 leading-none font-number">{formatTime(timeLeft)}</span>
                         </div>
                     </div>
 
                     <div className="flex flex-1 overflow-hidden relative">
                         <div className="flex-1 flex flex-col relative z-0 h-full overflow-hidden">
-                            <div className="flex-1 flex items-center justify-center p-2 overflow-hidden relative bg-gray-50/50">
+                            <div className="flex-1 flex items-center justify-center p-2 overflow-hidden relative bg-blue-50/50 grid-pattern">
                                 <div className="w-full h-full max-w-5xl relative flex items-center justify-center">
-                                    {currentQIndex > 0 && <button onClick={() => navigate('prev')} className="absolute left-0 top-1/2 -translate-y-1/2 z-30 bg-white/50 hover:bg-white rounded-full p-1 md:p-2 text-gray-600 shadow-lg transform -translate-x-1/2 md:translate-x-0 w-12 h-12 md:w-16 md:h-16 flex items-center justify-center"><i className="fas fa-chevron-left text-2xl md:text-3xl"></i><div className="absolute -bottom-4 text-[10px] md:text-xs text-center font-number bg-white/80 px-1 rounded">{String(currentQIndex).padStart(2,'0')}</div></button>}
-                                    {currentQIndex < config.length - 1 && <button onClick={() => navigate('next')} className="absolute right-0 top-1/2 -translate-y-1/2 z-30 bg-white/50 hover:bg-white rounded-full p-1 md:p-2 text-gray-600 shadow-lg transform translate-x-1/2 md:translate-x-0 w-12 h-12 md:w-16 md:h-16 flex items-center justify-center"><i className="fas fa-chevron-right text-2xl md:text-3xl"></i><div className="absolute -bottom-4 text-[10px] md:text-xs text-center font-number bg-white/80 px-1 rounded">{String(currentQIndex + 2).padStart(2,'0')}</div></button>}
+                                    {currentQIndex > 0 && <button onClick={() => navigate('prev')} className="absolute left-0 top-1/2 -translate-y-1/2 z-30 bg-white hover:bg-blue-50 rounded-full p-1 md:p-2 text-blue-600 shadow-lg transform -translate-x-1/2 md:translate-x-0 w-12 h-12 md:w-16 md:h-16 flex items-center justify-center border border-blue-100"><i className="fas fa-chevron-left text-2xl md:text-3xl"></i><div className="absolute -bottom-4 text-[10px] md:text-xs text-center font-number bg-white/80 px-1 rounded text-blue-800">{String(currentQIndex).padStart(2,'0')}</div></button>}
+                                    {currentQIndex < config.length - 1 && <button onClick={() => navigate('next')} className="absolute right-0 top-1/2 -translate-y-1/2 z-30 bg-white hover:bg-blue-50 rounded-full p-1 md:p-2 text-blue-600 shadow-lg transform translate-x-1/2 md:translate-x-0 w-12 h-12 md:w-16 md:h-16 flex items-center justify-center border border-blue-100"><i className="fas fa-chevron-right text-2xl md:text-3xl"></i><div className="absolute -bottom-4 text-[10px] md:text-xs text-center font-number bg-white/80 px-1 rounded text-blue-800">{String(currentQIndex + 2).padStart(2,'0')}</div></button>}
                                     
-                                    <div className="relative w-full h-full select-none flex items-center justify-center bg-white shadow-lg border border-gray-200">
-                                        <AsyncImage srcs={currentQ ? currentQ.imageSrcs : []} alt={`Problem ${currentQ ? currentQ.id : ''}`} className="max-w-full max-h-full object-contain pointer-events-none" fallback={<div className="absolute inset-0 w-full h-full bg-gray-50 flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-300 flex"><i className="fas fa-image text-4xl mb-2"></i><span className="text-xl font-bold text-gray-500">問題 {currentQ ? currentQ.id : ''}</span><span className="text-xs mt-2">画像を配置してください</span></div>} />
+                                    <div className="relative w-full h-full select-none flex items-center justify-center bg-white shadow-lg border border-gray-200 rounded-lg overflow-hidden">
+                                        <AsyncImage srcs={currentQ ? currentQ.imageSrcs : []} alt={`Problem ${currentQ ? currentQ.id : ''}`} className="max-w-full max-h-full object-contain pointer-events-none" fallback={<div className="absolute inset-0 w-full h-full bg-blue-50 flex-col items-center justify-center text-blue-300 border-2 border-dashed border-blue-200 flex"><i className="fas fa-image text-4xl mb-2"></i><span className="text-xl font-bold text-blue-400">問題 {currentQ ? currentQ.id : ''}</span><span className="text-xs mt-2">画像を配置してください</span></div>} />
                                         <div className="absolute inset-0 w-full h-full"><CanvasLayer drawings={drawings[currentQ ? currentQ.id : ''] || []} onDrawEnd={(stroke) => handleDrawEnd(currentQ ? currentQ.id : null, stroke)} tool={tool} color={color} isVisible={isToolbarVisible} /></div>
                                     </div>
                                 </div>
@@ -634,16 +657,19 @@
                             
                             <div className="bg-white border-t border-gray-300 p-2 shrink-0 z-20 shadow-[0_-2px_10px_rgba(0,0,0,0.1)]">
                                 <div className="flex justify-center items-center mb-2 bg-gray-100 py-1 px-2 rounded-lg inline-block mx-auto min-w-max max-w-full overflow-x-auto custom-scrollbar">
-                                    <button onClick={() => setIsToolbarVisible(!isToolbarVisible)} className={`w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded border border-transparent text-gray-600 hover:bg-gray-200 ${isToolbarVisible ? 'text-red-600' : ''}`}><i className={`fas ${isToolbarVisible ? 'fa-eye' : 'fa-eye-slash'} text-sm md:text-lg`}></i></button>
+                                    <button onClick={() => setIsToolbarVisible(!isToolbarVisible)} className={`w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded border border-transparent text-gray-600 hover:bg-gray-200 ${isToolbarVisible ? 'text-blue-600' : ''}`}><i className={`fas ${isToolbarVisible ? 'fa-eye' : 'fa-eye-slash'} text-sm md:text-lg`}></i></button>
                                     <div className={`flex items-center space-x-1 md:space-x-2 ${isToolbarVisible ? '' : 'invisible pointer-events-none'}`}>
                                         <div className="w-px h-5 md:h-6 bg-gray-300 mx-1"></div>
-                                        <button onClick={() => setTool('pencil')} className={`w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded border ${tool==='pencil' ? 'border-red-500 bg-red-50 text-red-600' : 'border-transparent text-gray-600 hover:bg-gray-200'}`}><i className="fas fa-pencil-alt text-sm md:text-lg"></i></button>
-                                        <button onClick={() => setTool('line')} className={`w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded border ${tool==='line' ? 'border-red-500 bg-red-50 text-red-600' : 'border-transparent text-gray-600 hover:bg-gray-200'}`}><i className="fas fa-slash text-sm md:text-lg"></i></button>
-                                        <button onClick={() => setTool('eraser')} className={`w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded border ${tool==='eraser' ? 'border-red-500 bg-red-50 text-red-600' : 'border-transparent text-gray-600 hover:bg-gray-200'}`}><i className="fas fa-eraser text-sm md:text-lg"></i></button>
+                                        {/* ツールバーの選択ハイライト：青系に変更 */}
+                                        <button onClick={() => setTool('pencil')} className={`w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded border ${tool==='pencil' ? 'border-blue-500 bg-blue-50 text-blue-600' : 'border-transparent text-gray-600 hover:bg-gray-200'}`}><i className="fas fa-pencil-alt text-sm md:text-lg"></i></button>
+                                        <button onClick={() => setTool('line')} className={`w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded border ${tool==='line' ? 'border-blue-500 bg-blue-50 text-blue-600' : 'border-transparent text-gray-600 hover:bg-gray-200'}`}><i className="fas fa-slash text-sm md:text-lg"></i></button>
+                                        <button onClick={() => setTool('eraser')} className={`w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded border ${tool==='eraser' ? 'border-blue-500 bg-blue-50 text-blue-600' : 'border-transparent text-gray-600 hover:bg-gray-200'}`}><i className="fas fa-eraser text-sm md:text-lg"></i></button>
                                         <div className="w-px h-5 md:h-6 bg-gray-300 mx-1"></div>
-                                        <button onClick={() => setColor('black')} className={`w-6 h-6 md:w-8 md:h-8 rounded-full border-2 mx-0.5 md:mx-1 flex items-center justify-center ${color==='black' ? 'border-red-500 scale-110' : 'border-transparent opacity-70 hover:opacity-100'}`}><div className="w-full h-full rounded-full border border-gray-300 bg-black"></div></button>
-                                        <button onClick={() => setColor('red')} className={`w-6 h-6 md:w-8 md:h-8 rounded-full border-2 mx-0.5 md:mx-1 flex items-center justify-center ${color==='red' ? 'border-red-500 scale-110' : 'border-transparent opacity-70 hover:opacity-100'}`}><div className="w-full h-full rounded-full border border-gray-300 bg-red-600"></div></button>
-                                        <button onClick={() => setColor('blue')} className={`w-6 h-6 md:w-8 md:h-8 rounded-full border-2 mx-0.5 md:mx-1 flex items-center justify-center ${color==='blue' ? 'border-red-500 scale-110' : 'border-transparent opacity-70 hover:opacity-100'}`}><div className="w-full h-full rounded-full border border-gray-300 bg-blue-600"></div></button>
+                                        {/* カラー選択：選択枠を青系に */}
+                                        <button onClick={() => setColor('black')} className={`w-6 h-6 md:w-8 md:h-8 rounded-full border-2 mx-0.5 md:mx-1 flex items-center justify-center ${color==='black' ? 'border-blue-500 scale-110' : 'border-transparent opacity-70 hover:opacity-100'}`}><div className="w-full h-full rounded-full border border-gray-300 bg-black"></div></button>
+                                        {/* 赤ペンは赤のまま残す */}
+                                        <button onClick={() => setColor('red')} className={`w-6 h-6 md:w-8 md:h-8 rounded-full border-2 mx-0.5 md:mx-1 flex items-center justify-center ${color==='red' ? 'border-blue-500 scale-110' : 'border-transparent opacity-70 hover:opacity-100'}`}><div className="w-full h-full rounded-full border border-gray-300 bg-red-600"></div></button>
+                                        <button onClick={() => setColor('blue')} className={`w-6 h-6 md:w-8 md:h-8 rounded-full border-2 mx-0.5 md:mx-1 flex items-center justify-center ${color==='blue' ? 'border-blue-500 scale-110' : 'border-transparent opacity-70 hover:opacity-100'}`}><div className="w-full h-full rounded-full border border-gray-300 bg-blue-600"></div></button>
                                         <div className="w-px h-5 md:h-6 bg-gray-300 mx-1"></div>
                                         <button onClick={undo} className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded border border-transparent text-gray-600 hover:bg-gray-200"><i className="fas fa-undo text-sm md:text-lg"></i></button>
                                         <button onClick={redo} className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded border border-transparent text-gray-600 hover:bg-gray-200"><i className="fas fa-redo text-sm md:text-lg"></i></button>
@@ -652,19 +678,21 @@
                                 </div>
                                 
                                 <div className="flex flex-row items-stretch space-x-2 max-w-4xl mx-auto h-12 md:h-14">
-                                    <button onClick={() => currentQ && toggleBookmark(currentQ.id)} className={`flex flex-col items-center justify-center px-1 md:p-2 w-10 md:w-14 shrink-0 ${currentQ && bookmarks[currentQ.id] ? 'bg-red-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'} transition-colors rounded-sm`}>
+                                    {/* ブックマークボタン：赤→青 */}
+                                    <button onClick={() => currentQ && toggleBookmark(currentQ.id)} className={`flex flex-col items-center justify-center px-1 md:p-2 w-10 md:w-14 shrink-0 ${currentQ && bookmarks[currentQ.id] ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'} transition-colors rounded-sm`}>
                                         <div className="text-[8px] md:text-[9px] mb-0.5 whitespace-nowrap">後で確認</div>
                                         <i className={`fas fa-bookmark text-sm md:text-xl ${currentQ && bookmarks[currentQ.id] ? 'text-white' : 'text-gray-400'}`}></i>
                                     </button>
                                     
-                                    <div className="flex-1 border-2 border-black flex items-center px-2 md:px-4 relative bg-gray-100 overflow-hidden">
+                                    <div className="flex-1 border-2 border-black flex items-center px-2 md:px-4 relative bg-gray-100 overflow-hidden rounded-sm">
                                         {currentQ && currentQ.type === 'text' ? (
                                             <input type="text" placeholder={currentQ && lockedAnswers[currentQ.id] ? "" : "解答入力"} value={currentQ ? answers[currentQ.id] || "" : ""} onChange={(e) => handleAnswerChange(e.target.value)} disabled={currentQ && lockedAnswers[currentQ.id]} className="w-full h-full bg-transparent text-lg md:text-xl outline-none disabled:text-gray-500" />
                                         ) : (
                                             <div className="flex space-x-2 md:space-x-4 w-full h-full items-center overflow-x-auto no-scrollbar">
                                                 {currentQ && currentQ.options.map((opt, idx) => (
-                                                    <button key={idx} disabled={currentQ && lockedAnswers[currentQ.id]} onClick={() => handleAnswerChange(idx)} className={`flex items-center space-x-1 px-1.5 py-1 rounded whitespace-nowrap ${currentQ && answers[currentQ.id] === idx ? 'text-red-600 font-bold' : 'text-gray-600'}`}>
-                                                        <span className={`w-3 h-3 md:w-4 md:h-4 rounded-full border flex-shrink-0 ${currentQ && answers[currentQ.id] === idx ? 'bg-red-600 border-red-600' : 'border-gray-400'}`}></span>
+                                                    <button key={idx} disabled={currentQ && lockedAnswers[currentQ.id]} onClick={() => handleAnswerChange(idx)} className={`flex items-center space-x-1 px-1.5 py-1 rounded whitespace-nowrap ${currentQ && answers[currentQ.id] === idx ? 'text-blue-600 font-bold bg-blue-50' : 'text-gray-600 hover:bg-gray-200'}`}>
+                                                        {/* 選択中の丸印も青に */}
+                                                        <span className={`w-3 h-3 md:w-4 md:h-4 rounded-full border flex-shrink-0 ${currentQ && answers[currentQ.id] === idx ? 'bg-blue-600 border-blue-600' : 'border-gray-400'}`}></span>
                                                         <span className="text-sm md:text-base">{getCircledNumber(idx)} {opt}</span>
                                                     </button>
                                                 ))}
@@ -673,15 +701,16 @@
                                     </div>
                                     
                                     <div className="w-20 md:w-32 shrink-0">
+                                        {/* 解答・リセットボタン：赤→青 */}
                                         {currentQ && lockedAnswers[currentQ.id] ? (
-                                            <button onClick={resetAnswer} className="w-full h-full border-2 border-red-600 text-red-600 font-bold hover:bg-red-50 text-sm md:text-lg">リセット</button>
+                                            <button onClick={resetAnswer} className="w-full h-full border-2 border-blue-600 text-blue-600 font-bold hover:bg-blue-50 text-sm md:text-lg rounded-sm transition-colors">リセット</button>
                                         ) : (
-                                            <button onClick={submitAnswer} className="w-full h-full border-2 border-red-800 text-red-800 font-bold bg-white hover:bg-red-50 text-sm md:text-lg shadow-sm">解答</button>
+                                            <button onClick={submitAnswer} className="w-full h-full border-2 border-blue-800 text-blue-800 font-bold bg-white hover:bg-blue-50 text-sm md:text-lg shadow-sm rounded-sm transition-colors">解答</button>
                                         )}
                                     </div>
                                 </div>
                                 <div className="md:hidden mt-1 text-center">
-                                    <button onClick={() => setIsMenuOpen(true)} className="text-[10px] font-bold flex items-center justify-center w-full py-1 bg-white border shadow-sm text-gray-500"><i className="fas fa-list-ol mr-1"></i> 問題一覧を見る</button>
+                                    <button onClick={() => setIsMenuOpen(true)} className="text-[10px] font-bold flex items-center justify-center w-full py-1 bg-white border shadow-sm text-gray-500 rounded"><i className="fas fa-list-ol mr-1"></i> 問題一覧を見る</button>
                                 </div>
                             </div>
                         </div>
@@ -696,10 +725,10 @@
                     </div>
                     
                     {isMenuOpen && (
-                        <div className="fixed inset-0 z-50 bg-gray-800/80 flex items-center justify-center p-4">
-                            <div className="bg-white w-full h-full max-w-md rounded-lg overflow-hidden flex flex-col relative">
+                        <div className="fixed inset-0 z-50 bg-blue-900/80 flex items-center justify-center p-4 backdrop-blur-sm">
+                            <div className="bg-white w-full h-full max-w-md rounded-lg overflow-hidden flex flex-col relative shadow-2xl">
                                 <div className="p-4 border-b flex justify-between items-center bg-gray-100">
-                                    <span className="font-bold">問題一覧</span>
+                                    <span className="font-bold text-blue-900">問題一覧</span>
                                     <button onClick={() => setIsMenuOpen(false)}><i className="fas fa-times text-2xl text-gray-600"></i></button>
                                 </div>
                                 <div className="flex-1 overflow-y-auto p-2">
@@ -715,7 +744,6 @@
         };
 
         const FinishScreen = ({ userAnswers, onRestart, config, riddleId, userName, timeTaken }) => {
-            // modalState: { index: number, type: 'image' | 'explanation' } or null
             const [modalState, setModalState] = useState(null);
             
             const results = useMemo(() => {
@@ -764,7 +792,7 @@
                         isCorrect, 
                         explanationSrcs: q.explanationSrcs,
                         imageSrcs: q.imageSrcs,
-                        points: q.points // Added for table display
+                        points: q.points
                     };
                 });
                 return { grading, totalScore, maxScore };
@@ -827,22 +855,22 @@
                 ? (modalState.type === 'image' ? currentModalData.imageSrcs : currentModalData.explanationSrcs)
                 : null;
             
-            // 修正: 問題か解説かでモードを切り替える
             const isScrollMode = modalState && modalState.type === 'explanation';
 
             return (
-                <div className="flex flex-col h-full font-sans overflow-hidden relative z-20">
-                     <div className="bg-white border-b border-red-500 h-12 md:h-14 flex items-center justify-between px-2 md:px-4 shrink-0 z-20">
+                <div className="flex flex-col h-full font-sans overflow-hidden relative z-20 bg-gray-50">
+                     {/* ヘッダー：赤→青 */}
+                     <div className="bg-white border-b-2 border-blue-500 h-12 md:h-14 flex items-center justify-between px-2 md:px-4 shrink-0 z-20">
                         <div className="flex items-center space-x-2 md:space-x-4">
                             <div className="h-6 md:h-8"><img src="deco/logo.png" alt="ロゴ" className="h-full object-contain" /></div>
                             <div className="text-xs text-gray-500 hidden md:block">ユーザーネーム: {userName}</div>
                         </div>
                     </div>
 
-                     {/* 変更: 級の表示を小さくして1行に収める */}
-                     <div className="border-b-4 border-red-600 p-4 bg-white shrink-0 shadow-sm text-center flex flex-row justify-center items-center gap-2 md:gap-4">
+                     {/* スコアボード：赤→青 */}
+                     <div className="border-b-4 border-blue-600 p-4 bg-white shrink-0 shadow-sm text-center flex flex-row justify-center items-center gap-2 md:gap-4">
                         <div className="text-base sm:text-xl md:text-4xl font-bold text-gray-800 whitespace-nowrap">
-                            判定: <span className="text-red-600">{getGrade(results.totalScore)}</span>
+                            判定: <span className="text-blue-600">{getGrade(results.totalScore)}</span>
                         </div>
                         <div className="w-[2px] h-6 md:h-8 bg-gray-300 mx-1 md:mx-2"></div>
                         <div className="text-xs sm:text-lg md:text-2xl font-bold text-gray-600 font-number whitespace-nowrap">
@@ -854,38 +882,39 @@
                         </div>
                     </div>
                     
-                    <div className="flex-1 overflow-y-auto p-2 md:p-8">
-                        <div className="max-w-5xl mx-auto bg-white shadow rounded-lg overflow-hidden">
+                    <div className="flex-1 overflow-y-auto p-2 md:p-8 grid-pattern">
+                        <div className="max-w-5xl mx-auto bg-white shadow-xl rounded-xl overflow-hidden border border-blue-100">
                             <table className="w-full text-left border-collapse text-sm md:text-base">
-                                <thead className="bg-gray-100 border-b border-gray-300">
+                                <thead className="bg-blue-50 border-b border-blue-200">
                                     <tr>
-                                        <th className="p-2 md:p-3 text-center w-10 md:w-16">No.</th>
-                                        <th className="p-2 md:p-3 text-center w-16">点数</th>
-                                        <th className="p-2 md:p-3 w-1/4">正解</th>
-                                        <th className="p-2 md:p-3 w-1/4">あなたの答え</th>
-                                        <th className="p-2 md:p-3 text-center w-10 md:w-16">判定</th>
-                                        <th className="p-2 md:p-3 text-center w-20 md:w-24">問題</th>
-                                        <th className="p-2 md:p-3 text-center w-16 md:w-24">解説</th>
+                                        <th className="p-2 md:p-3 text-center w-10 md:w-16 text-blue-900">No.</th>
+                                        <th className="p-2 md:p-3 text-center w-16 text-blue-900">点数</th>
+                                        <th className="p-2 md:p-3 w-1/4 text-blue-900">正解</th>
+                                        <th className="p-2 md:p-3 w-1/4 text-blue-900">あなたの答え</th>
+                                        <th className="p-2 md:p-3 text-center w-10 md:w-16 text-blue-900">判定</th>
+                                        <th className="p-2 md:p-3 text-center w-20 md:w-24 text-blue-900">問題</th>
+                                        <th className="p-2 md:p-3 text-center w-16 md:w-24 text-blue-900">解説</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {results.grading.map((row, idx) => (
-                                        <tr key={row.id} className="border-b border-gray-200 hover:bg-gray-200 transition-colors">
-                                            <td className="p-2 md:p-3 text-center font-bold text-gray-700 font-number">{row.id}</td>
+                                        <tr key={row.id} className="border-b border-gray-100 hover:bg-blue-50 transition-colors">
+                                            <td className="p-2 md:p-3 text-center font-bold text-blue-800 font-number">{row.id}</td>
                                             <td className="p-2 md:p-3 text-center text-gray-600">{row.points}点</td>
                                             <td className="p-2 md:p-3 text-green-700 font-medium break-all">{row.correctAns}</td>
                                             <td className="p-2 md:p-3 text-gray-800 break-all">{row.userAns}</td>
                                             <td className="p-2 md:p-3 text-center">
+                                                {/* 正誤判定のアイコン色は赤緑で維持（視認性優先） */}
                                                 {row.isCorrect ? <i className="fas fa-check-circle text-green-500 text-xl md:text-2xl"></i> : <i className="fas fa-times-circle text-red-500 text-xl md:text-2xl"></i>}
                                             </td>
                                             <td className="p-2 md:p-3 text-center">
-                                                <button onClick={() => openModal(idx, 'image')} className="text-gray-600 hover:text-blue-600 transition-colors flex items-center justify-center w-full">
+                                                <button onClick={() => openModal(idx, 'image')} className="text-gray-500 hover:text-blue-600 transition-colors flex items-center justify-center w-full">
                                                     <i className="far fa-image text-xl mr-1"></i>
                                                     <span className="text-xs font-bold">問題</span>
                                                 </button>
                                             </td>
                                             <td className="p-2 md:p-3 text-center">
-                                                <button onClick={() => openModal(idx, 'explanation')} className="text-gray-600 hover:text-red-600 transition-colors flex items-center justify-center w-full">
+                                                <button onClick={() => openModal(idx, 'explanation')} className="text-gray-500 hover:text-blue-600 transition-colors flex items-center justify-center w-full">
                                                     <i className="fas fa-book-open text-xl mr-1"></i>
                                                     <span className="text-xs font-bold">解説</span>
                                                 </button>
@@ -896,26 +925,27 @@
                             </table>
                         </div>
                         <div className="flex flex-col items-center justify-center mt-8 pb-8 space-y-4">
-                             <button onClick={onRestart} className="bg-red-600 text-white font-bold text-lg py-4 px-12 hover:bg-red-700 shadow-lg transition-colors">トップページに戻る</button>
-                             <button onClick={shareOnX} className="bg-black text-white font-bold text-lg py-3 px-10 rounded-full hover:bg-gray-800 shadow-lg transition-colors flex items-center">
+                             {/* ボタン：赤→青 */}
+                             <button onClick={onRestart} className="bg-blue-600 text-white font-bold text-lg py-4 px-12 rounded-full hover:bg-blue-700 shadow-lg transition-all hover:shadow-xl hover:-translate-y-0.5">トップページに戻る</button>
+                             <button onClick={shareOnX} className="bg-black text-white font-bold text-lg py-3 px-10 rounded-full hover:bg-gray-800 shadow-lg transition-all flex items-center hover:-translate-y-0.5">
                                 <i className="fab fa-x-twitter mr-2 text-xl"></i> 𝕏で結果報告！
                              </button>
                         </div>
                     </div>
                     
                     {modalState && (
-                        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 animate-fade-in" onClick={closeModal}>
+                        <div className="fixed inset-0 z-50 bg-blue-900/90 flex items-center justify-center p-4 animate-fade-in backdrop-blur-sm" onClick={closeModal}>
                             <div className="relative w-full max-w-5xl h-full flex flex-col pointer-events-none">
                                 {/* Close Button */}
                                 <div className="flex justify-end p-2 pointer-events-auto">
-                                    <button onClick={closeModal} className="text-white hover:text-gray-300">
+                                    <button onClick={closeModal} className="text-white hover:text-blue-200 transition-colors">
                                         <i className="fas fa-times text-3xl"></i>
                                     </button>
                                 </div>
 
                                 {/* Main Content */}
                                 <div 
-                                    className={`flex-1 relative pointer-events-auto bg-white rounded-lg mb-2 ${isScrollMode ? 'overflow-y-auto custom-scrollbar' : 'overflow-hidden flex items-center justify-center'}`} 
+                                    className={`flex-1 relative pointer-events-auto bg-white rounded-xl mb-2 shadow-2xl ${isScrollMode ? 'overflow-y-auto custom-scrollbar' : 'overflow-hidden flex items-center justify-center'}`} 
                                     onClick={e => e.stopPropagation()}
                                 >
                                     <AsyncImage 
@@ -928,10 +958,10 @@
                                 </div>
 
                                 {/* Navigation Bar */}
-                                <div className="bg-white rounded-full p-2 flex items-center justify-between pointer-events-auto shadow-lg select-none" onClick={e => e.stopPropagation()}>
+                                <div className="bg-white rounded-full p-2 flex items-center justify-between pointer-events-auto shadow-xl select-none border border-blue-100" onClick={e => e.stopPropagation()}>
                                     <button 
                                         onClick={goPrev} 
-                                        className={`w-12 h-12 flex items-center justify-center rounded-full transition-colors text-gray-700 hover:bg-gray-100 active:bg-gray-200`}
+                                        className={`w-12 h-12 flex items-center justify-center rounded-full transition-colors text-blue-700 hover:bg-blue-50 active:bg-blue-100`}
                                     >
                                         <i className="fas fa-chevron-left text-2xl"></i>
                                     </button>
@@ -942,7 +972,7 @@
                                         </div>
                                         <button 
                                             onClick={toggleType}
-                                            className={`px-6 py-2 rounded-full font-bold text-white shadow transition-transform active:scale-95 flex items-center ${modalState.type === 'image' ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'}`}
+                                            className={`px-6 py-2 rounded-full font-bold text-white shadow transition-transform active:scale-95 flex items-center ${modalState.type === 'image' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-green-600 hover:bg-green-700'}`}
                                         >
                                             {modalState.type === 'image' ? (
                                                 <><i className="fas fa-book-open mr-2"></i>解説を見る</>
@@ -954,7 +984,7 @@
 
                                     <button 
                                         onClick={goNext} 
-                                        className={`w-12 h-12 flex items-center justify-center rounded-full transition-colors text-gray-700 hover:bg-gray-100 active:bg-gray-200`}
+                                        className={`w-12 h-12 flex items-center justify-center rounded-full transition-colors text-blue-700 hover:bg-blue-50 active:bg-blue-100`}
                                     >
                                         <i className="fas fa-chevron-right text-2xl"></i>
                                     </button>
@@ -1037,18 +1067,14 @@
                         });
                     }
 
-                    // --- PRELOAD LOGIC START ---
-                    // Resolve valid image URLs for all questions BEFORE starting exam
                     const preloadPromises = tempConfig.map(q => resolveImage(q.imageSrcs));
                     const resolvedSrcs = await Promise.all(preloadPromises);
 
-                    // Update config with the specifically resolved URL (if found) to avoid AsyncImage flickering/retrying
                     resolvedSrcs.forEach((src, idx) => {
                         if (src) {
                             tempConfig[idx].imageSrcs = [src]; 
                         }
                     });
-                    // --- PRELOAD LOGIC END ---
 
                     setConfig(tempConfig);
                     setScreen('exam'); 
@@ -1074,19 +1100,21 @@
             const restart = () => { setFinalAnswers({}); setScreen('start'); };
 
             if (loading) {
-                return <div className="w-full flex items-center justify-center bg-white font-sans text-xl font-bold flex-col" style={{ height: viewportHeight }}>
-                    <div className="mb-4"><i className="fas fa-spinner fa-spin text-4xl text-red-600"></i></div>
-                    <div>試験データを準備中...</div>
-                    <div className="text-sm text-gray-500 mt-2 font-normal">画像の読み込みを行っています</div>
+                return <div className="w-full flex items-center justify-center bg-blue-50 font-sans text-xl font-bold flex-col" style={{ height: viewportHeight }}>
+                    <div className="mb-4"><i className="fas fa-spinner fa-spin text-4xl text-blue-600"></i></div>
+                    <div className="text-blue-900">試験データを準備中...</div>
+                    <div className="text-sm text-blue-500 mt-2 font-normal">画像の読み込みを行っています</div>
                 </div>;
             }
 
+            // 外枠デザインの変更：直線だけではなく工夫（二重線＋角丸＋コーナー装飾）
             return (
                 <div 
-                    className="w-full font-sans border-[4px] md:border-[8px] border-red-600 box-border overflow-hidden relative"
-                    style={{ height: viewportHeight }} 
+                    className="w-full font-sans border-[4px] md:border-[8px] border-blue-800 border-double box-border overflow-hidden relative rounded-xl shadow-2xl m-auto"
+                    style={{ height: viewportHeight, maxWidth: '100%', maxHeight: '100%' }} 
                 >
-                    <div style={{ position: 'absolute', inset: 0, zIndex: -1, backgroundImage: "url('deco/back.png')", backgroundSize: 'cover', backgroundRepeat: 'no-repeat', backgroundPosition: 'center', opacity: 0.5 }}></div>
+                    <CornerDeco />
+                    <div style={{ position: 'absolute', inset: 0, zIndex: -1, backgroundImage: "url('deco/back.png')", backgroundSize: 'cover', backgroundRepeat: 'no-repeat', backgroundPosition: 'center', opacity: 0.1, mixBlendMode: 'multiply' }}></div>
 
                     {screen === 'start' && <StartScreen onStart={startExam} initialName={userName} />}
                     
