@@ -288,7 +288,6 @@
             );
         };
 
-        // CanvasLayer: 修正済み。drawings の undefined チェックを追加し、白屏を防ぐ。
         const CanvasLayer = ({ drawings = [], onDrawEnd, tool, color, isVisible }) => {
             const canvasRef = useRef(null);
             const isDrawing = useRef(false);
@@ -329,7 +328,6 @@
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 ctx.restore();
                 
-                // 【修正】 安全対策：drawings が配列でない場合は処理しない
                 if (!Array.isArray(drawings)) return;
 
                 drawings.forEach(stroke => {
@@ -458,9 +456,7 @@
             const itemRefs = useRef({});
             const listContainerRef = useRef(null);
             
-            // currentQ may be undefined while loading — guard usage
             const currentQ = config && config.length > 0 ? config[currentQIndex] : null;
-            const currentQId = currentQ ? currentQ.id : null;
 
             useEffect(() => {
                 const timer = setInterval(() => {
@@ -484,7 +480,7 @@
             }, [isTimeUp, answers, onFinish]);
 
             useEffect(() => {
-                if (!currentQ) return; // guard: avoid reading id of undefined
+                if (!currentQ) return; 
                 const element = itemRefs.current[currentQ.id];
                 if (element) element.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }, [currentQIndex, currentQ]);
@@ -537,7 +533,6 @@
                 return () => window.removeEventListener('keydown', handleKeyDown);
             }, [currentQIndex]);
 
-            // 修正: handleDrawEnd を qId ベースで受け取り、関数自体は安定化（依存なし）
             const handleDrawEnd = useCallback((qId, newStroke) => {
                 if (!qId) return;
                 setDrawings(prev => {
@@ -604,7 +599,6 @@
                 <div className="flex flex-col h-full font-sans relative z-20 overflow-hidden">
                     <ConfirmationModal isOpen={modalConfig.isOpen} message={modalConfig.message} onConfirm={modalConfig.onConfirm} onCancel={() => setModalConfig(prev => ({ ...prev, isOpen: false }))} />
                     
-                    {/* Header: 高さ固定。スマホでは高さを少し詰める */}
                     <div className="bg-white border-b border-red-500 h-12 md:h-14 flex items-center justify-between px-2 md:px-4 shrink-0 z-20">
                         <div className="flex items-center space-x-2 md:space-x-4">
                             <div className="h-6 md:h-8"><img src="deco/logo.png" alt="ロゴ" className="h-full object-contain" /></div>
@@ -617,9 +611,7 @@
                         </div>
                     </div>
 
-                    {/* Main Content: Flexで可変 */}
                     <div className="flex flex-1 overflow-hidden relative">
-                        {/* Center Area: Image & Canvas */}
                         <div className="flex-1 flex flex-col relative z-0 h-full overflow-hidden">
                             <div className="flex-1 flex items-center justify-center p-2 overflow-hidden relative bg-gray-50/50">
                                 <div className="w-full h-full max-w-5xl relative flex items-center justify-center">
@@ -628,15 +620,12 @@
                                     
                                     <div className="relative w-full h-full select-none flex items-center justify-center bg-white shadow-lg border border-gray-200">
                                         <AsyncImage srcs={currentQ ? currentQ.imageSrcs : []} alt={`Problem ${currentQ ? currentQ.id : ''}`} className="max-w-full max-h-full object-contain pointer-events-none" fallback={<div className="absolute inset-0 w-full h-full bg-gray-50 flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-300 flex"><i className="fas fa-image text-4xl mb-2"></i><span className="text-xl font-bold text-gray-500">問題 {currentQ ? currentQ.id : ''}</span><span className="text-xs mt-2">画像を配置してください</span></div>} />
-                                        {/* 【修正】 drawings が undefined の場合に空配列を渡す（フェイルセーフ） */}
                                         <div className="absolute inset-0 w-full h-full"><CanvasLayer drawings={drawings[currentQ ? currentQ.id : ''] || []} onDrawEnd={(stroke) => handleDrawEnd(currentQ ? currentQ.id : null, stroke)} tool={tool} color={color} isVisible={isToolbarVisible} /></div>
                                     </div>
                                 </div>
                             </div>
                             
-                            {/* Footer (Answer Area): 高さ自動調節 */}
                             <div className="bg-white border-t border-gray-300 p-2 shrink-0 z-20 shadow-[0_-2px_10px_rgba(0,0,0,0.1)]">
-                                {/* Toolbar Line */}
                                 <div className="flex justify-center items-center mb-2 bg-gray-100 py-1 px-2 rounded-lg inline-block mx-auto min-w-max max-w-full overflow-x-auto custom-scrollbar">
                                     <button onClick={() => setIsToolbarVisible(!isToolbarVisible)} className={`w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded border border-transparent text-gray-600 hover:bg-gray-200 ${isToolbarVisible ? 'text-red-600' : ''}`}><i className={`fas ${isToolbarVisible ? 'fa-eye' : 'fa-eye-slash'} text-sm md:text-lg`}></i></button>
                                     <div className={`flex items-center space-x-1 md:space-x-2 ${isToolbarVisible ? '' : 'invisible pointer-events-none'}`}>
@@ -655,7 +644,6 @@
                                     </div>
                                 </div>
                                 
-                                {/* Answer Line: スマホではフレックス折り返しを許容しレイアウトを調整 */}
                                 <div className="flex flex-row items-stretch space-x-2 max-w-4xl mx-auto h-12 md:h-14">
                                     <button onClick={() => currentQ && toggleBookmark(currentQ.id)} className={`flex flex-col items-center justify-center px-1 md:p-2 w-10 md:w-14 shrink-0 ${currentQ && bookmarks[currentQ.id] ? 'bg-red-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'} transition-colors rounded-sm`}>
                                         <div className="text-[8px] md:text-[9px] mb-0.5 whitespace-nowrap">後で確認</div>
@@ -691,7 +679,6 @@
                             </div>
                         </div>
 
-                        {/* Sidebar (Desktop only) */}
                         <div className="hidden md:flex w-64 bg-white border-l border-gray-300 flex-col shrink-0 overflow-hidden h-full">
                             <div ref={listContainerRef} className="flex-1 overflow-y-auto custom-scrollbar pb-20">
                                 {config.map((q, idx) => (
@@ -701,7 +688,6 @@
                         </div>
                     </div>
                     
-                    {/* Mobile Menu Modal */}
                     {isMenuOpen && (
                         <div className="fixed inset-0 z-50 bg-gray-800/80 flex items-center justify-center p-4">
                             <div className="bg-white w-full h-full max-w-md rounded-lg overflow-hidden flex flex-col relative">
@@ -722,10 +708,14 @@
         };
 
         const FinishScreen = ({ userAnswers, onRestart, config, riddleId }) => {
-            const [explanationImageSrcs, setExplanationImageSrcs] = useState(null);
+            const [modalImageSrcs, setModalImageSrcs] = useState(null);
+            
             const results = useMemo(() => {
                 let totalScore = 0;
+                let maxScore = 0; 
+                
                 const grading = config.map(q => {
+                    maxScore += q.points;
                     const userAns = userAnswers[q.id];
                     let isCorrect = false;
                     let displayUserAns = "-";
@@ -759,29 +749,55 @@
                     }
 
                     if (isCorrect) totalScore += q.points;
-                    return { id: q.id, userAns: displayUserAns, correctAns: displayCorrectAns, isCorrect, explanationSrcs: q.explanationSrcs };
+                    return { 
+                        id: q.id, 
+                        userAns: displayUserAns, 
+                        correctAns: displayCorrectAns, 
+                        isCorrect, 
+                        explanationSrcs: q.explanationSrcs,
+                        imageSrcs: q.imageSrcs 
+                    };
                 });
-                return { grading, totalScore };
+                return { grading, totalScore, maxScore };
             }, [userAnswers, config]);
 
+            const getGrade = (score) => {
+                if (score >= 100) return "1級";
+                if (score >= 90) return "準1級";
+                if (score >= 80) return "2級";
+                if (score >= 70) return "準2級";
+                if (score >= 60) return "3級";
+                if (score >= 50) return "4級";
+                if (score >= 40) return "5級";
+                if (score >= 30) return "6級";
+                if (score >= 20) return "7級";
+                return "8級";
+            };
+
             const shareOnX = () => {
-                const text = `riddle${riddleId}で${results.totalScore}点を獲得しました！\nあなたも謎を解いてみよう\nhttps://maruten0420.github.io/Nazoken-Modoki/`;
+                const text = `riddle${riddleId}で${results.totalScore}点を獲得しました！判定は${getGrade(results.totalScore)}です！\nあなたも謎を解いてみよう\nhttps://maruten0420.github.io/Nazoken-Modoki/`;
                 const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
                 window.open(url, '_blank');
             };
 
             return (
                 <div className="flex flex-col h-full font-sans overflow-hidden relative z-20">
-                     <div className="border-b-2 border-red-600 p-4 flex justify-between items-center bg-white shrink-0">
-                        <h1 className="text-xl md:text-2xl font-bold text-red-600">受検結果</h1>
-                        <div className="text-lg md:text-xl font-bold">合計得点: <span className="text-2xl md:text-3xl text-red-600 font-number">{results.totalScore}</span> / 100点</div>
+                     <div className="border-b-4 border-red-600 p-4 bg-white shrink-0 shadow-sm text-center">
+                        <div className="text-3xl md:text-4xl font-bold text-gray-800 mb-1">
+                            判定: <span className="text-red-600">{getGrade(results.totalScore)}</span>
+                        </div>
+                        <div className="text-xl md:text-2xl font-bold text-gray-600 font-number">
+                            点数: {results.totalScore}点 / {results.maxScore}点
+                        </div>
                     </div>
+                    
                     <div className="flex-1 overflow-y-auto p-2 md:p-8">
                         <div className="max-w-5xl mx-auto bg-white shadow rounded-lg overflow-hidden">
                             <table className="w-full text-left border-collapse text-sm md:text-base">
                                 <thead className="bg-gray-100 border-b border-gray-300">
                                     <tr>
                                         <th className="p-2 md:p-3 text-center w-10 md:w-16">No.</th>
+                                        <th className="p-2 md:p-3 text-center w-16 md:w-20">問題</th>
                                         <th className="p-2 md:p-3 w-1/4">正解</th>
                                         <th className="p-2 md:p-3 w-1/4">あなたの答え</th>
                                         <th className="p-2 md:p-3 text-center w-10 md:w-16">判定</th>
@@ -792,13 +808,18 @@
                                     {results.grading.map((row) => (
                                         <tr key={row.id} className="border-b border-gray-200 hover:bg-gray-50">
                                             <td className="p-2 md:p-3 text-center font-bold text-gray-700 font-number">{row.id}</td>
+                                            <td className="p-2 md:p-3 text-center">
+                                                <button onClick={() => setModalImageSrcs(row.imageSrcs)} className="text-gray-600 hover:text-blue-600 transition-colors flex items-center justify-center w-full">
+                                                    <i className="far fa-image text-xl"></i>
+                                                </button>
+                                            </td>
                                             <td className="p-2 md:p-3 text-green-700 font-medium break-all">{row.correctAns}</td>
                                             <td className="p-2 md:p-3 text-gray-800 break-all">{row.userAns}</td>
                                             <td className="p-2 md:p-3 text-center">
                                                 {row.isCorrect ? <i className="fas fa-check-circle text-green-500 text-xl md:text-2xl"></i> : <i className="fas fa-times-circle text-red-500 text-xl md:text-2xl"></i>}
                                             </td>
                                             <td className="p-2 md:p-3 text-center">
-                                                <button onClick={() => setExplanationImageSrcs(row.explanationSrcs)} className="text-gray-600 hover:text-red-600 transition-colors flex items-center justify-center w-full">
+                                                <button onClick={() => setModalImageSrcs(row.explanationSrcs)} className="text-gray-600 hover:text-red-600 transition-colors flex items-center justify-center w-full">
                                                     <i className="fas fa-book-open mr-1"></i> <span className="hidden sm:inline">解説</span>
                                                 </button>
                                             </td>
@@ -808,19 +829,19 @@
                             </table>
                         </div>
                         <div className="flex flex-col items-center justify-center mt-8 pb-8 space-y-4">
-                             <button onClick={onRestart} className="bg-red-600 text-white font-bold text-lg py-4 px-12 hover:bg-red-700 shadow-lg transition-transform hover:scale-105">トップページに戻る</button>
-                             <button onClick={shareOnX} className="bg-black text-white font-bold text-lg py-3 px-10 rounded-full hover:bg-gray-800 shadow-lg transition-transform hover:scale-105 flex items-center">
-                                {/* 修正: 文字 'X' をユニコードの '𝕏' に変更 */}
+                             <button onClick={onRestart} className="bg-red-600 text-white font-bold text-lg py-4 px-12 hover:bg-red-700 shadow-lg transition-colors">トップページに戻る</button>
+                             <button onClick={shareOnX} className="bg-black text-white font-bold text-lg py-3 px-10 rounded-full hover:bg-gray-800 shadow-lg transition-colors flex items-center">
                                 <i className="fab fa-x-twitter mr-2 text-xl"></i> 𝕏で結果報告！
                              </button>
                         </div>
                     </div>
-                    {explanationImageSrcs && (
-                        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 animate-fade-in cursor-pointer" onClick={() => setExplanationImageSrcs(null)}>
+                    
+                    {modalImageSrcs && (
+                        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 animate-fade-in cursor-pointer" onClick={() => setModalImageSrcs(null)}>
                             <div className="relative max-w-4xl max-h-full bg-white p-1 rounded shadow-xl cursor-default" onClick={e => e.stopPropagation()}>
-                                <button onClick={() => setExplanationImageSrcs(null)} className="absolute -top-10 right-0 text-white hover:text-gray-300"><i className="fas fa-times text-3xl"></i></button>
+                                <button onClick={() => setModalImageSrcs(null)} className="absolute -top-10 right-0 text-white hover:text-gray-300"><i className="fas fa-times text-3xl"></i></button>
                                 <div className="overflow-auto max-h-[85vh]">
-                                    <AsyncImage srcs={explanationImageSrcs} alt="解説" className="max-w-full h-auto" fallback={<div className="p-8 text-center text-gray-500"><p>解説画像が見つかりませんでした。</p></div>} />
+                                    <AsyncImage srcs={modalImageSrcs} alt="詳細画像" className="max-w-full h-auto" fallback={<div className="p-8 text-center text-gray-500"><p>画像が見つかりませんでした。</p></div>} />
                                 </div>
                             </div>
                         </div>
@@ -846,18 +867,15 @@
                     <div className={`w-1 shrink-0 ${isActive ? 'bg-red-600' : isBookmarked ? 'bg-red-500' : 'bg-transparent'}`}></div>
                     
                     <div className="flex-1 p-2 relative overflow-hidden h-full grid grid-cols-[1fr_auto] grid-rows-2 gap-x-2">
-                        {/* 上段左: 番号と点数 */}
                         <div className="flex items-center space-x-2 col-start-1 row-start-1 self-start">
                             <span className={`text-2xl font-bold leading-none font-number ${isActive ? 'text-red-600' : isAnswered ? 'text-gray-600' : 'text-gray-800'}`}>{String(q.id).padStart(2, '0')}</span>
                             <span className="text-xs text-gray-400">{q.points}点</span>
                         </div>
 
-                        {/* 右側全体: 画像 (Rowspan 2) */}
                         <div className="col-start-2 row-start-1 row-end-3 w-16 h-full bg-white border border-gray-200 flex items-center justify-center overflow-hidden self-center">
                              <AsyncImage srcs={q.imageSrcs} className="w-full h-full object-cover" />
                         </div>
 
-                        {/* 下段左: しおりと解答 (gapで重なり回避) */}
                         <div className="col-start-1 row-start-2 flex items-end self-end h-full relative w-full overflow-hidden">
                             <div className="flex items-center w-full gap-2">
                                 {isBookmarked && <div className="text-red-600 flex-shrink-0"><i className="fas fa-bookmark text-xl"></i></div>}
@@ -869,7 +887,6 @@
             );
         });
 
-        // 3. Appコンポーネントの修正（CSV読み込み処理）
         const App = () => {
             const [screen, setScreen] = useState('start');
             const [userName, setUserName] = useState("");
@@ -878,13 +895,9 @@
             const [loading, setLoading] = useState(false);
             const viewportHeight = useViewportHeight();
             
-            // 【修正4】 制限時間管理用の state を追加
             const [timeLimit, setTimeLimit] = useState(60);
-            
-            // 【修正8】 現在の問題セットIDを管理
             const [currentRiddleId, setCurrentRiddleId] = useState(1);
 
-            // Function to load config for a specific riddle
             const loadRiddleData = async (riddleId) => {
                 setLoading(true);
                 try {
@@ -898,7 +911,6 @@
                     const lines = text.split(/\r\n|\n/).filter(line => line.trim() !== '');
                     if (lines.length < 1) throw new Error('Empty CSV');
 
-                    // 【修正5】 1行目3列目から制限時間を取得するように変更
                     const headCols = lines[0].split(',');
                     const totalStr = headCols[0] || '0';
                     const selCountStr = headCols[1] || '0';
@@ -906,7 +918,6 @@
                     const totalQuestions = parseInt(totalStr, 10) || 0;
                     const selectionCount = parseInt(selCountStr, 10) || 0;
 
-                    // 【修正6】 取得した制限時間を state にセット（数値変換、不正値なら60分）
                     const parsedLimit = parseInt(timeLimitStr, 10);
                     setTimeLimit(!isNaN(parsedLimit) && parsedLimit > 0 ? parsedLimit : 60);
 
@@ -966,7 +977,7 @@
 
             const startExam = (name, riddleId) => {
                 setUserName(name);
-                setCurrentRiddleId(riddleId); // RiddleIDを保存
+                setCurrentRiddleId(riddleId); 
                 loadRiddleData(riddleId);
             };
 
@@ -980,14 +991,12 @@
             return (
                 <div 
                     className="w-full font-sans border-[4px] md:border-[8px] border-red-600 box-border overflow-hidden relative"
-                    style={{ height: viewportHeight }} // 正確な高さを適用
+                    style={{ height: viewportHeight }} 
                 >
-                    {/* Fixed Background Layer */}
                     <div style={{ position: 'absolute', inset: 0, zIndex: -1, backgroundImage: "url('deco/back.png')", backgroundRepeat: 'repeat', backgroundPosition: 'center', opacity: 0.5 }}></div>
 
                     {screen === 'start' && <StartScreen onStart={startExam} initialName={userName} />}
                     
-                    {/* 【修正7】 ExamScreen に timeLimit を渡す */}
                     {screen === 'exam' && <ExamScreen userName={userName} onFinish={finishExam} config={config} timeLimit={timeLimit} />}
                     
                     {screen === 'finish' && <FinishScreen userAnswers={finalAnswers} onRestart={restart} config={config} riddleId={currentRiddleId} />}
