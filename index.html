@@ -624,7 +624,8 @@
             }
 
             return (
-                <div className="flex flex-col h-full font-sans relative z-20 overflow-hidden bg-gray-50">
+                // 変更: 背景色(bg-gray-50)を削除し、透明(bg-transparent)にして親の背景画像を見せる
+                <div className="flex flex-col h-full font-sans relative z-20 overflow-hidden bg-transparent">
                     <ConfirmationModal isOpen={modalConfig.isOpen} message={modalConfig.message} onConfirm={modalConfig.onConfirm} onCancel={() => setModalConfig(prev => ({ ...prev, isOpen: false }))} />
                     
                     {/* ヘッダー：赤→青 */}
@@ -858,7 +859,8 @@
             const isScrollMode = modalState && modalState.type === 'explanation';
 
             return (
-                <div className="flex flex-col h-full font-sans overflow-hidden relative z-20 bg-gray-50">
+                // 変更: 背景色(bg-gray-50)を削除し、透明(bg-transparent)にして親の背景画像を見せる
+                <div className="flex flex-col h-full font-sans overflow-hidden relative z-20 bg-transparent">
                      {/* ヘッダー：赤→青 */}
                      <div className="bg-white border-b-2 border-blue-500 h-12 md:h-14 flex items-center justify-between px-2 md:px-4 shrink-0 z-20">
                         <div className="flex items-center space-x-2 md:space-x-4">
