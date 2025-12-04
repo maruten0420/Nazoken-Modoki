@@ -307,7 +307,7 @@
             const textClass = isAnswered ? 'text-gray-600' : 'text-gray-800';
 
             return (
-                <button ref={ref} onClick={onClick} className={`w-full border-b border-gray-200 flex items-stretch text-left h-20 transition-colors ${bgClass} ${textClass}`}>
+                <button ref={ref} onClick={onClick} className={`w-full border-b border-gray-200 flex items-stretch text-left h-20 transition-colors ${bgClass} ${textClass} hover:bg-gray-200 group`}>
                     <div className={`w-1 shrink-0 ${isActive ? 'bg-red-600' : isBookmarked ? 'bg-red-500' : 'bg-transparent'}`}></div>
                     <div className="flex-1 p-2 relative overflow-hidden h-full grid grid-cols-[1fr_auto] grid-rows-2 gap-x-2">
                         <div className="flex items-center space-x-2 col-start-1 row-start-1 self-start">
@@ -406,7 +406,7 @@
                         <div className="max-w-4xl w-full bg-white p-6 md:p-8 space-y-6 md:space-y-8 shadow-xl rounded-lg my-auto">
                             <div className="border-b-2 border-red-600 pb-4 mb-4 md:mb-8 flex justify-between items-end">
                                 <div className="h-10 md:h-12"><img src="deco/logo.png" alt="ロゴ" className="h-full object-contain" onError={(e) => e.target.style.display = 'none'} /></div>
-                                <div className="text-xs md:text-sm text-gray-500">ユーザーネーム: {handleName || "未入力"}</div>
+                                <div className="text-xs md:text-sm text-gray-500">ユーザーネーム: {handleName || "(未入力)"}</div>
                             </div>
                             <div className="space-y-4 md:space-y-6">
                                 <div className="bg-gray-50 p-4 md:p-6 rounded border border-gray-200">
@@ -778,7 +778,7 @@
             };
 
             const shareOnX = () => {
-                const text = `${userName}はriddle${riddleId}で${results.totalScore}点獲得しました！判定は${getGrade(results.totalScore)}です！\nあなたも謎を解いてみよう\nhttps://maruten0420.github.io/Nazoken-Modoki/`;
+                const text = `${userName}はriddle${riddleId}で${results.totalScore}点獲得しました！判定は${getGrade(results.totalScore)}です！\nあなたも謎を解いてみよう\n#謎解き模擬試験 #謎解き\n\nhttps://maruten0420.github.io/Nazoken-Modoki/`;
                 const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
                 window.open(url, '_blank');
             };
@@ -1060,10 +1060,16 @@
             }
 
             return (
-                <div className="w-full font-sans border-[4px] md:border-[8px] border-red-600 box-border overflow-hidden relative" style={{ height: viewportHeight }}>
-                    <div style={{ position: 'absolute', inset: 0, zIndex: -1, backgroundImage: "url('deco/back.png')", backgroundRepeat: 'repeat', backgroundPosition: 'center', opacity: 0.5 }}></div>
+                <div 
+                    className="w-full font-sans border-[4px] md:border-[8px] border-red-600 box-border overflow-hidden relative"
+                    style={{ height: viewportHeight }} 
+                >
+                    <div style={{ position: 'absolute', inset: 0, zIndex: -1, backgroundImage: "url('deco/back.png')", backgroundSize: 'cover', backgroundRepeat: 'no-repeat', backgroundPosition: 'center', opacity: 0.5 }}></div>
+
                     {screen === 'start' && <StartScreen onStart={startExam} initialName={userName} />}
+                    
                     {screen === 'exam' && <ExamScreen userName={userName} onFinish={finishExam} config={config} timeLimit={timeLimit} />}
+                    
                     {screen === 'finish' && <FinishScreen userAnswers={finalAnswers} onRestart={restart} config={config} riddleId={currentRiddleId} userName={userName} />}
                 </div>
             );
