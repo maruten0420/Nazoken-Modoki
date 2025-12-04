@@ -105,7 +105,8 @@
             );
         };
 
-        const AsyncImage = ({ src, srcs, alt, className, fallback }) => {
+        // AsyncImage: modeプロパティを追加 ('fit' or 'scroll')
+        const AsyncImage = ({ src, srcs, alt, className, fallback, mode = 'fit' }) => {
             const [loadedSrc, setLoadedSrc] = useState(null);
             const [loading, setLoading] = useState(true);
             const [error, setError] = useState(false);
@@ -139,8 +140,13 @@
 
             if (error) return fallback || <div className="flex flex-col items-center text-gray-400 p-2 justify-center h-full bg-white border"><i className="fas fa-image text-2xl mb-1"></i><span className="text-[10px] mt-1">No Image</span></div>;
 
+            // modeによってラッパーのクラスを切り替え
+            const wrapperClass = mode === 'fit'
+                ? "relative w-full h-full flex items-center justify-center overflow-hidden bg-white"
+                : "relative w-full min-h-[100px] flex items-center justify-center bg-white"; // scrollモードならoverflow-hiddenとh-fullを外す
+
             return (
-                <div className="relative w-full h-full flex items-center justify-center overflow-hidden bg-white">
+                <div className={wrapperClass}>
                     {loading && <div className="absolute inset-0 flex items-center justify-center bg-gray-50 text-gray-400 font-bold text-xs z-0 font-number">Loading...</div>}
                     <img src={loadedSrc} alt={alt} className={`${className} ${loading ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`} />
                 </div>
@@ -880,8 +886,14 @@
                                 </div>
 
                                 {/* Main Content */}
-                                <div className="flex-1 relative flex items-center justify-center pointer-events-auto overflow-hidden bg-white/5 rounded-lg mb-2" onClick={e => e.stopPropagation()}>
-                                    <AsyncImage srcs={currentModalSrcs} alt="詳細" className="max-w-full max-h-full object-contain" fallback={<div className="text-white">画像が見つかりません</div>} />
+                                <div className="flex-1 relative pointer-events-auto overflow-y-auto bg-white rounded-lg mb-2 custom-scrollbar" onClick={e => e.stopPropagation()}>
+                                    <AsyncImage 
+                                        srcs={currentModalSrcs} 
+                                        alt="詳細" 
+                                        className="w-full h-auto block" 
+                                        mode="scroll"
+                                        fallback={<div className="text-gray-500 p-4 text-center">画像が見つかりません</div>} 
+                                    />
                                 </div>
 
                                 {/* Navigation Bar */}
