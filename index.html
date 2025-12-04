@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>謎検もどき</title>
+    <title>謎解き模擬試験</title>
     
     <link rel="icon" href="deco/icon.png" type="image/png">
     <link rel="apple-touch-icon" href="deco/icon.png">
@@ -66,7 +66,28 @@
             return circled[index] || `(${index + 1})`;
         };
 
-        // --- UI Components (Defined BEFORE Screens to avoid ReferenceErrors) ---
+        // --- Helper for Preloading ---
+        const resolveImage = (srcs) => {
+            return new Promise((resolve) => {
+                let attempt = 0;
+                const tryNext = () => {
+                    if (attempt >= srcs.length) {
+                        resolve(null); // No valid image found
+                        return;
+                    }
+                    const img = new Image();
+                    img.src = srcs[attempt];
+                    img.onload = () => resolve(srcs[attempt]); // Found valid image
+                    img.onerror = () => {
+                        attempt++;
+                        tryNext();
+                    };
+                };
+                tryNext();
+            });
+        };
+
+        // --- UI Components ---
 
         const ConfirmationModal = ({ isOpen, message, onConfirm, onCancel }) => {
             if (!isOpen) return null;
@@ -303,7 +324,7 @@
             );
         });
 
-        // --- Screen Components (Defined AFTER UI Components) ---
+        // --- Screen Components ---
 
         const StartScreen = ({ onStart, initialName }) => {
             const [handleName, setHandleName] = useState(initialName || "");
@@ -723,7 +744,7 @@
                                         <th className="p-2 md:p-3 w-1/4">正解</th>
                                         <th className="p-2 md:p-3 w-1/4">あなたの答え</th>
                                         <th className="p-2 md:p-3 text-center w-10 md:w-16">判定</th>
-                                        <th className="p-2 md:p-3 text-center w-16 md:w-20">問題</th>
+                                        <th className="p-2 md:p-3 text-center w-20 md:w-24">問題</th>
                                         <th className="p-2 md:p-3 text-center w-16 md:w-24">解説</th>
                                     </tr>
                                 </thead>
@@ -738,7 +759,8 @@
                                             </td>
                                             <td className="p-2 md:p-3 text-center">
                                                 <button onClick={() => setModalImageSrcs(row.imageSrcs)} className="text-gray-600 hover:text-blue-600 transition-colors flex items-center justify-center w-full">
-                                                    <i className="far fa-image text-xl"></i>
+                                                    <i className="far fa-image text-xl mr-1"></i>
+                                                    <span className="text-xs font-bold">問題</span>
                                                 </button>
                                             </td>
                                             <td className="p-2 md:p-3 text-center">
@@ -842,6 +864,20 @@
                             primaryAnswer: primaryAnswer
                         });
                     }
+
+                    // --- PRELOAD LOGIC START ---
+                    // Resolve valid image URLs for all questions BEFORE starting exam
+                    const preloadPromises = tempConfig.map(q => resolveImage(q.imageSrcs));
+                    const resolvedSrcs = await Promise.all(preloadPromises);
+
+                    // Update config with the specifically resolved URL (if found) to avoid AsyncImage flickering/retrying
+                    resolvedSrcs.forEach((src, idx) => {
+                        if (src) {
+                            tempConfig[idx].imageSrcs = [src]; 
+                        }
+                    });
+                    // --- PRELOAD LOGIC END ---
+
                     setConfig(tempConfig);
                     setScreen('exam'); 
                 } catch (e) {
@@ -862,7 +898,11 @@
             const restart = () => { setFinalAnswers({}); setScreen('start'); };
 
             if (loading) {
-                return <div className="w-full flex items-center justify-center bg-white font-sans" style={{ height: viewportHeight }}>設定データを読み込み中...</div>;
+                return <div className="w-full flex items-center justify-center bg-white font-sans text-xl font-bold flex-col" style={{ height: viewportHeight }}>
+                    <div className="mb-4"><i className="fas fa-spinner fa-spin text-4xl text-red-600"></i></div>
+                    <div>試験データを準備中...</div>
+                    <div className="text-sm text-gray-500 mt-2 font-normal">画像の読み込みを行っています</div>
+                </div>;
             }
 
             return (
