@@ -45,6 +45,8 @@
 
         // --- Constants ---
         const FILE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.jfif', '.gif'];
+        // 自動検出する最大riddle番号（必要に応じて増やしてください）
+        const MAX_RIDDLE_CHECK = 20;
 
         // --- Custom Hook ---
         const useViewportHeight = () => {
@@ -328,10 +330,48 @@
 
         const StartScreen = ({ onStart, initialName }) => {
             const [handleName, setHandleName] = useState(initialName || "");
-            const [selectedRiddle, setSelectedRiddle] = useState(1);
+            const [selectedRiddle, setSelectedRiddle] = useState(null);
+            const [availableRiddles, setAvailableRiddles] = useState([]);
             const [riddleInfo, setRiddleInfo] = useState({ creator: '...', count: '...', limit: '...' });
+            const [isChecking, setIsChecking] = useState(true);
+
+            // 【新機能】起動時に riddle1 ～ MAX_RIDDLE_CHECK までをスキャンして存在するものをリストアップ
+            useEffect(() => {
+                const checkRiddles = async () => {
+                    const validRiddles = [];
+                    const checks = Array.from({ length: MAX_RIDDLE_CHECK }, (_, i) => i + 1).map(async (num) => {
+                        try {
+                            const csvPath = `riddle/riddle${num}/riddle${num}.csv`;
+                            const response = await fetch(csvPath, { method: 'HEAD' }); // HEADリクエストで存在確認
+                            // 一部のサーバーではHEADが許可されていない場合があるので、その場合はGETで再試行
+                            if (response.ok) {
+                                return num;
+                            } else if (response.status === 405) {
+                                const responseGet = await fetch(csvPath, { method: 'GET' });
+                                if (responseGet.ok) return num;
+                            }
+                        } catch (e) {
+                            // エラーなら無視
+                        }
+                        return null;
+                    });
+
+                    const results = await Promise.all(checks);
+                    const found = results.filter(n => n !== null).sort((a, b) => a - b);
+                    setAvailableRiddles(found);
+                    if (found.length > 0) {
+                        setSelectedRiddle(found[0]); // 最初に見つかったものをデフォルト選択
+                    }
+                    setIsChecking(false);
+                };
+                checkRiddles();
+            }, []);
 
             useEffect(() => {
+                if (!selectedRiddle) {
+                    setRiddleInfo({ creator: '-', count: '-', limit: '-' });
+                    return;
+                }
                 const fetchRiddleInfo = async () => {
                     setRiddleInfo({ creator: '読み込み中...', count: '...', limit: '...' });
                     try {
@@ -377,11 +417,25 @@
                                 </div>
                                 <div className="bg-gray-50 p-4 md:p-6 rounded border border-gray-200">
                                     <label className="block text-gray-700 font-bold mb-4 text-sm md:text-base">問題セット選択</label>
-                                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4 mb-4">
-                                        <button onClick={() => setSelectedRiddle(1)} className={`border-2 font-bold py-2 md:py-3 px-2 md:px-4 rounded shadow-sm font-number transition-colors text-sm md:text-base ${selectedRiddle === 1 ? 'bg-red-600 border-red-600 text-white' : 'bg-red-50 border-red-500 text-red-700'}`}>riddle1</button>
-                                        <button onClick={() => setSelectedRiddle(2)} className={`border-2 font-bold py-2 md:py-3 px-2 md:px-4 rounded shadow-sm font-number transition-colors text-sm md:text-base ${selectedRiddle === 2 ? 'bg-red-600 border-red-600 text-white' : 'bg-red-50 border-red-500 text-red-700'}`}>riddle2</button>
-                                        {[3,4,5,6,7,8,9,10].map(num => (<button key={num} disabled className="bg-gray-200 text-gray-400 font-bold py-2 md:py-3 px-2 md:px-4 rounded cursor-not-allowed font-number text-sm md:text-base">riddle{num}</button>))}
-                                    </div>
+                                    {isChecking ? (
+                                        <div className="text-center py-4 text-gray-500"><i className="fas fa-spinner fa-spin mr-2"></i>問題セットを確認中...</div>
+                                    ) : (
+                                        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4 mb-4">
+                                            {availableRiddles.length > 0 ? (
+                                                availableRiddles.map(num => (
+                                                    <button 
+                                                        key={num} 
+                                                        onClick={() => setSelectedRiddle(num)}
+                                                        className={`border-2 font-bold py-2 md:py-3 px-2 md:px-4 rounded shadow-sm font-number transition-colors text-sm md:text-base ${selectedRiddle === num ? 'bg-red-600 border-red-600 text-white' : 'bg-red-50 border-red-500 text-red-700'}`}
+                                                    >
+                                                        riddle{num}
+                                                    </button>
+                                                ))
+                                            ) : (
+                                                <div className="col-span-full text-center text-gray-500 py-2">利用可能な問題セットが見つかりません</div>
+                                            )}
+                                        </div>
+                                    )}
                                     <div className="text-sm md:text-base text-gray-700 bg-white p-3 rounded border border-gray-300 flex flex-wrap gap-4 items-center">
                                         <div className="flex items-center"><i className="fas fa-user-edit text-gray-400 mr-2"></i><span className="font-bold mr-1">制作者:</span> {riddleInfo.creator}</div>
                                         <div className="flex items-center"><i className="fas fa-list-ol text-gray-400 mr-2"></i><span className="font-bold mr-1">問題数:</span> {riddleInfo.count}</div>
@@ -390,7 +444,7 @@
                                 </div>
                             </div>
                             <div className="flex flex-col items-center justify-center mt-8 md:mt-12 space-y-4">
-                                <button onClick={() => handleName && onStart(handleName, selectedRiddle)} disabled={!handleName} className={`font-bold text-lg md:text-xl py-3 md:py-4 px-8 md:px-12 rounded shadow-lg transition-all ${handleName ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-gray-400 text-white cursor-not-allowed'}`}>模試を受ける</button>
+                                <button onClick={() => handleName && selectedRiddle && onStart(handleName, selectedRiddle)} disabled={!handleName || !selectedRiddle} className={`font-bold text-lg md:text-xl py-3 md:py-4 px-8 md:px-12 rounded shadow-lg transition-all ${handleName && selectedRiddle ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-gray-400 text-white cursor-not-allowed'}`}>模試を受ける</button>
                                 <div className="text-xs text-gray-500 text-center leading-relaxed">
                                     <p>・このサイトは本家謎検の挙動とは異なることがあります。</p>
                                     <p>・このサイトはSCRAP、および本家謎検とは一切関係ございません。</p>
@@ -657,6 +711,7 @@
             const results = useMemo(() => {
                 let totalScore = 0;
                 let maxScore = 0; 
+                
                 const grading = config.map(q => {
                     maxScore += q.points;
                     const userAns = userAnswers[q.id];
@@ -692,7 +747,14 @@
                     }
 
                     if (isCorrect) totalScore += q.points;
-                    return { id: q.id, userAns: displayUserAns, correctAns: displayCorrectAns, isCorrect, explanationSrcs: q.explanationSrcs, imageSrcs: q.imageSrcs };
+                    return { 
+                        id: q.id, 
+                        userAns: displayUserAns, 
+                        correctAns: displayCorrectAns, 
+                        isCorrect, 
+                        explanationSrcs: q.explanationSrcs,
+                        imageSrcs: q.imageSrcs 
+                    };
                 });
                 return { grading, totalScore, maxScore };
             }, [userAnswers, config]);
@@ -764,8 +826,10 @@
                                                 </button>
                                             </td>
                                             <td className="p-2 md:p-3 text-center">
+                                                {/* 【変更】解説ボタンのスタイルを問題ボタンに統一（アイコン＋小さな太字） */}
                                                 <button onClick={() => setModalImageSrcs(row.explanationSrcs)} className="text-gray-600 hover:text-red-600 transition-colors flex items-center justify-center w-full">
-                                                    <i className="fas fa-book-open mr-1"></i> <span className="hidden sm:inline">解説</span>
+                                                    <i className="fas fa-book-open text-xl mr-1"></i>
+                                                    <span className="text-xs font-bold">解説</span>
                                                 </button>
                                             </td>
                                         </tr>
