@@ -443,7 +443,6 @@
                             </div>
                             <div className="flex flex-col items-center justify-center mt-8 md:mt-12 space-y-4">
                                 <button onClick={() => selectedRiddle && onStart(handleName || "(未入力)", selectedRiddle)} disabled={!selectedRiddle} className={`font-bold text-lg md:text-xl py-3 md:py-4 px-8 md:px-12 rounded shadow-lg transition-all ${selectedRiddle ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-gray-400 text-white cursor-not-allowed'}`}>模試を受ける</button>
-                                {/* 変更点: 左揃え、幅制限 */}
                                 <div className="text-xs text-gray-500 text-left leading-relaxed w-full max-w-lg">
                                     <p>・このサイトは本家謎検の挙動とは異なることがあります。</p>
                                     <p>・このサイトはSCRAP、および本家謎検とは一切関係ございません。</p>
@@ -494,10 +493,13 @@
 
             useEffect(() => {
                 if (isTimeUp) {
-                    const timeout = setTimeout(() => { onFinish(answers); }, 5000);
+                    const timeout = setTimeout(() => { 
+                        const elapsedTime = (timeLimit * 60);
+                        onFinish(answers, elapsedTime); 
+                    }, 5000);
                     return () => clearTimeout(timeout);
                 }
-            }, [isTimeUp, answers, onFinish]);
+            }, [isTimeUp, answers, onFinish, timeLimit]);
 
             useEffect(() => {
                 if (!currentQ) return; 
@@ -534,10 +536,13 @@
                 if (direction === 'prev' && currentQIndex > 0) setCurrentQIndex(curr => curr - 1);
                 if (direction === 'next' && currentQIndex < config.length - 1) setCurrentQIndex(curr => curr + 1);
             };
+            const handleFinish = () => {
+                const elapsedTime = (timeLimit * 60) - timeLeft;
+                onFinish(answers, elapsedTime);
+            };
             const confirmAction = (message, action) => {
                 setModalConfig({ isOpen: true, message, onConfirm: () => { action(); setModalConfig(prev => ({ ...prev, isOpen: false })); } });
             };
-            const handleFinish = () => onFinish(answers);
 
             useEffect(() => {
                 const handleKeyDown = (e) => {
@@ -709,7 +714,7 @@
             );
         };
 
-        const FinishScreen = ({ userAnswers, onRestart, config, riddleId, userName }) => {
+        const FinishScreen = ({ userAnswers, onRestart, config, riddleId, userName, timeTaken }) => {
             // modalState: { index: number, type: 'image' | 'explanation' } or null
             const [modalState, setModalState] = useState(null);
             
@@ -779,9 +784,15 @@
             };
 
             const shareOnX = () => {
-                const text = `${userName}はriddle${riddleId}で${results.totalScore}点獲得しました！判定は${getGrade(results.totalScore)}です！\nあなたも謎を解いてみよう\n#謎解き模擬試験\n\nhttps://maruten0420.github.io/Nazoken-Modoki/`;
+                const text = `${userName}はriddle${riddleId}で${results.totalScore}点獲得しました！判定は${getGrade(results.totalScore)}です！\nあなたも謎を解いてみよう\nhttps://maruten0420.github.io/Nazoken-Modoki/`;
                 const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
                 window.open(url, '_blank');
+            };
+
+            const formatTime = (seconds) => {
+                const m = Math.floor(seconds / 60);
+                const s = seconds % 60;
+                return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
             };
 
             // Modal Controls
@@ -829,13 +840,17 @@
                     </div>
 
                      {/* 変更: 級の表示を小さくして1行に収める */}
-                     <div className="border-b-4 border-red-600 p-4 bg-white shrink-0 shadow-sm text-center flex flex-row justify-center items-center gap-4">
-                        <div className="text-lg sm:text-2xl md:text-4xl font-bold text-gray-800 whitespace-nowrap">
+                     <div className="border-b-4 border-red-600 p-4 bg-white shrink-0 shadow-sm text-center flex flex-row justify-center items-center gap-2 md:gap-4">
+                        <div className="text-base sm:text-xl md:text-4xl font-bold text-gray-800 whitespace-nowrap">
                             判定: <span className="text-red-600">{getGrade(results.totalScore)}</span>
                         </div>
-                        <div className="w-[2px] h-8 bg-gray-300 mx-2"></div>
-                        <div className="text-sm sm:text-xl md:text-2xl font-bold text-gray-600 font-number whitespace-nowrap">
+                        <div className="w-[2px] h-6 md:h-8 bg-gray-300 mx-1 md:mx-2"></div>
+                        <div className="text-xs sm:text-lg md:text-2xl font-bold text-gray-600 font-number whitespace-nowrap">
                             点数: {results.totalScore}点 / {results.maxScore}点
+                        </div>
+                        <div className="w-[2px] h-6 md:h-8 bg-gray-300 mx-1 md:mx-2"></div>
+                        <div className="text-xs sm:text-lg md:text-2xl font-bold text-gray-600 font-number whitespace-nowrap">
+                            時間: {formatTime(timeTaken)}
                         </div>
                     </div>
                     
@@ -960,6 +975,7 @@
             const viewportHeight = useViewportHeight();
             const [timeLimit, setTimeLimit] = useState(60);
             const [currentRiddleId, setCurrentRiddleId] = useState(1);
+            const [finalTime, setFinalTime] = useState(0);
 
             const loadRiddleData = async (riddleId) => {
                 setLoading(true);
@@ -1050,7 +1066,11 @@
                 loadRiddleData(riddleId);
             };
 
-            const finishExam = (answers) => { setFinalAnswers(answers); setScreen('finish'); };
+            const finishExam = (answers, time) => { 
+                setFinalAnswers(answers); 
+                setFinalTime(time);
+                setScreen('finish'); 
+            };
             const restart = () => { setFinalAnswers({}); setScreen('start'); };
 
             if (loading) {
@@ -1072,7 +1092,7 @@
                     
                     {screen === 'exam' && <ExamScreen userName={userName} onFinish={finishExam} config={config} timeLimit={timeLimit} />}
                     
-                    {screen === 'finish' && <FinishScreen userAnswers={finalAnswers} onRestart={restart} config={config} riddleId={currentRiddleId} userName={userName} />}
+                    {screen === 'finish' && <FinishScreen userAnswers={finalAnswers} onRestart={restart} config={config} riddleId={currentRiddleId} userName={userName} timeTaken={finalTime} />}
                 </div>
             );
         };
